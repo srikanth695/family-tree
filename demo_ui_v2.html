@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name---
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Tree - Phase 2 Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        .sidebar-item:hover { background-color: #f5f5f4; }
+        .node-active { border-color: #78716c !important; ring: 2px; ring-color: #78716c; }
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #e7e5e4;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 flex h-screen w-screen">
+
+    <!-- SIDEBAR -->
+    <aside class="w-80 border-r border-stone-200 bg-white flex flex-col h-full shadow-sm z-10">
+        <!-- Controls Header -->
+        <div class="p-4 border-b border-stone-200">
+            <h2 class="font-semibold text-stone-900">Tree Controls</h2>
+            <div class="flex gap-2 mt-4">
+                <button onclick="openModal('person')" class="flex-1 text-xs py-2 bg-stone-900 text-stone-50 rounded-md font-medium hover:bg-stone-800 transition-colors">Add Person</button>
+                <button onclick="openModal('rel')" class="flex-1 text-xs py-2 border border-stone-200 text-stone-900 rounded-md font-medium hover:bg-stone-50 transition-colors">Add Relation</button>
+            </div>
+        </div>
+
+        <!-- Details Content (Dynamic) -->
+        <div id="details-container" class="flex-1 overflow-y-auto p-4">
+            <!-- Default State -->
+            <div id="details-empty" class="h-full flex flex-col items-center justify-center text-stone-400 text-center p-6">
+                <i data-lucide="mouse-pointer-2" class="w-8 h-8 mb-2 opacity-20"></i>
+                <p class="text-sm">Select a person in the tree to view details</p>
+            </div>
+
+            <!-- Active Person State (Hidden by default) -->
+            <div id="details-active" class="hidden space-y-8">
+                <section>
+                    <h3 id="detail-name" class="text-xl font-bold text-stone-900">John Doe</h3>
+                    <p id="detail-sub" class="text-xs text-stone-500">Member of Family Tree</p>
+                </section>
+
+                <!-- Timeline Section -->
+                <section>
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="calendar" class="w-4 h-4 text-stone-500"></i>
+                        <h4 class="text-sm font-semibold text-stone-700 uppercase tracking-wider">Life Events</h4>
+                    </div>
+                    <div class="relative space-y-6 pl-8 timeline-line">
+                        <div class="relative">
+                            <div class="absolute -left-[25px] top-1 w-3 h-3 rounded-full bg-stone-300 border-2 border-white"></div>
+                            <div class="text-sm font-medium text-stone-900">Born</div>
+                            <div class="text-xs text-stone-500">Jan 12, 1950 • London, UK</div>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[25px] top-1 w-3 h-3 rounded-full bg-stone-300 border-2 border-white"></div>
+                            <div class="text-sm font-medium text-stone-900">Graduated University</div>
+                            <div class="text-xs text-stone-500">Jun 15, 1972 • Oxford</div>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[25px] top-1 w-3 h-3 rounded-full bg-stone-300 border-2 border-white"></div>
+                            <div class="text-sm font-medium text-stone-900">Moved to New York</div>
+                            <div class="text-xs text-stone-500">Mar 10, 1980 • USA</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Media Section -->
+                <section>
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="image" class="w-4 h-4 text-stone-500"></i>
+                        <h4 class="text-sm font-semibold text-stone-700 uppercase tracking-wider">Media</h4>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="aspect-square bg-stone-100 rounded-lg overflow-hidden border border-stone-200 group relative">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </div>
+                        <div class="aspect-square bg-stone-100 rounded-lg overflow-hidden border border-stone-200 group relative">
+                            <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN VIEW (Graph Simulation) -->
+    <main class="flex-1 relative bg-stone-50 overflow-hidden">
+        <!-- Grid Background -->
+        <div class="absolute inset-0" style="background-image: radial-gradient(#e7e5e4 1px, transparent 1px); background-size: 20px 20px;"></div>
+
+        <!-- Mock Tree Nodes -->
+        <div id="graph-container" class="relative w-full h-full">
+            <!-- Node 1 -->
+            <div onclick="selectPerson('John Doe', 'Member')" class="absolute cursor-pointer group" style="top: 20%; left: 40%;">
+                <div class="w-32 h-16 bg-white border-2 border-stone-300 rounded-lg shadow-sm flex items-center justify-center text-sm font-bold text-stone-800 group-hover:border-stone-500 transition-all">
+                    John Doe
+                </div>
+                <div class="absolute -top-2 -left-2 w-4 h-4 bg-stone-300 rounded-full"></div>
+            </div>
+
+            <!-- Node 2 -->
+            <div onclick="selectPerson('Jane Doe', 'Member')" class="absolute cursor-pointer group" style="top: 45%; left: 20%;">
+                <div class="w-32 h-16 bg-white border-2 border-stone-300 rounded-lg shadow-sm flex items-center justify-center text-sm font-bold text-stone-800 group-hover:border-stone-500 transition-all">
+                    Jane Doe
+                </div>
+                <div class="absolute -top-2 -left-2 w-4 h-4 bg-stone-300 rounded-full"></div>
+            </div>
+
+            <!-- Node 3 -->
+            <div onclick="selectPerson('Baby Doe', 'Member')" class="absolute cursor-pointer group" style="top: 45%; left: 60%;">
+                <div class="w-32 h-16 bg-white border-2 border-stone-300 rounded-lg shadow-sm flex items-center justify-center text-sm font-bold text-stone-800 group-hover:border-stone-500 transition-all">
+                    Baby Doe
+                </div>
+                <div class="absolute -top-2 -left-2 w-4 h-4 bg-stone-300 rounded-full"></div>
+            </div>
+
+            <!-- Mock Edges (SVG) -->
+            <svg class="absolute inset-0 w-full h-full pointer-events-none">
+                <line x1="40%" y1="25%" x2="25%" y2="45%" stroke="#d6d3d1" stroke-width="2" />
+                <line x1="40%" y1="25%" x2="55%" y2="45%" stroke="#d6d3d1" stroke-width="2" />
+            </svg>
+        </div>
+
+        <!-- Floating Help Toast -->
+        <div class="absolute bottom-6 right-6 bg-stone-900 text-stone-50 px-4 py-2 rounded-full text-xs shadow-lg animate-bounce">
+            Click a person to explore details
+        </div>
+    </main>
+
+    <!-- MODAL PLACEHOLDER -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+            <h3 id="modal-title" class="text-lg font-bold mb-4">Add New</h3>
+            <div class="space-y-4">
+                <input type="text" placeholder="Enter name..." class="w-full px-3 py-2 border rounded-md">
+                <button onclick="closeModal()" class="w-full py-2 bg-stone-900 text-white rounded-md">Save</button>
+                <button onclick="closeModal()" class="w-full py-2 text-stone-500 text-sm">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        function selectPerson(name, role) {
+            // Hide empty state
+            document.getElementById('details-empty').classList.add('hidden');
+
+            // Show active state
+            const activePanel = document.getElementById('details-active');
+            activePanel.classList.remove('hidden');
+
+            // Update Content
+            document.getElementById('detail-name').innerText = name;
+            document.getElementById('detail-sub').innerText = role;
+
+            // Scroll to top of panel
+            document.getElementById('details-container').scrollTop = 0;
+        }
+
+        function openModal(type) {
+            const modal = document.getElementById('modal-overlay');
+            const title = document.getElementById('modal-title');
+            title.innerText = type === 'person' ? 'Add New Person' : 'Add Relationship';
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

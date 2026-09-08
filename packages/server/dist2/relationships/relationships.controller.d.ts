@@ -1,0 +1,91 @@
+import { RelationshipsService } from './relationships.service';
+export declare class RelationshipsController {
+    private readonly relationshipsService;
+    constructor(relationshipsService: RelationshipsService);
+    create(treeId: string, body: Record<string, unknown>, req: any): Promise<{
+        id: string;
+        created_at: Date;
+        person_a_id: string;
+        person_b_id: string;
+        type: string;
+        start_date: Date | null;
+        end_date: Date | null;
+        status: string | null;
+        tree_id: string;
+    }>;
+    findAll(treeId: string, req: any): Promise<({
+        person_a: {
+            id: string;
+            created_at: Date;
+            first_name: string;
+            last_name: string | null;
+            maiden_name: string | null;
+            nicknames: string[];
+            gender: string | null;
+            birth_date: Date | null;
+            birth_date_precision: string | null;
+            birth_place: string | null;
+            death_date: Date | null;
+            death_date_precision: string | null;
+            death_place: string | null;
+            is_living: boolean;
+            bio: string | null;
+            occupation: string | null;
+            religion: string | null;
+            nationality: string | null;
+            languages: string[];
+            cause_of_death: string | null;
+            burial_place: string | null;
+            tree_id: string;
+            created_by: string | null;
+            updated_at: Date;
+        };
+        person_b: {
+            id: string;
+            created_at: Date;
+            first_name: string;
+            last_name: string | null;
+            maiden_name: string | null;
+            nicknames: string[];
+            gender: string | null;
+            birth_date: Date | null;
+            birth_date_precision: string | null;
+            birth_place: string | null;
+            death_date: Date | null;
+            death_date_precision: string | null;
+            death_place: string | null;
+            is_living: boolean;
+            bio: string | null;
+            occupation: string | null;
+            religion: string | null;
+            nationality: string | null;
+            languages: string[];
+            cause_of_death: string | null;
+            burial_place: string | null;
+            tree_id: string;
+            created_by: string | null;
+            updated_at: Date;
+        };
+    } & {
+        id: string;
+        created_at: Date;
+        person_a_id: string;
+        person_b_id: string;
+        type: string;
+        start_date: Date | null;
+        end_date: Date | null;
+        status: string | null;
+        tree_id: string;
+    })[]>;
+    remove(id: string, req: any): Promise<{
+        id: string;
+        created_at: Date;
+        person_a_id: string;
+        person_b_id: string;
+        type: string;
+        start_date: Date | null;
+        end_date: Date | null;
+        status: string | null;
+        tree_id: string;
+    }>;
+}

@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String?
+  name          String?
+  avatar_url    String?
+  role          String   @default("user")
+  created_at    DateTime @default(now())
+
+  owned_trees    FamilyTree[]
+  tree_members   TreeMember[]
+  created_people People[]
+  created_stories Story[]
+  uploaded_media Media[]
+
+  @@map("users")
+}
+
+model FamilyTree {
+  id         String   @id @default(uuid())
+  name       String
+  owner_id   String
+  owner      User     @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+
+  members       TreeMember[]
+  people        People[]
+  media         Media[]
+  sources       Source[]
+  stories       Story[]
+  relationships Relationship[]
+
+  @@map("family_trees")
+}
+
+model TreeMember {
+  id         String     @id @default(uuid())
+  tree_id    String
+  tree       FamilyTree @relation(fields: [tree_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role       String
+  invited_at DateTime?
+
+  @@unique([tree_id, user_id])
+  @@map("tree_members")
+}
+
+model People {
+  id                   String     @id @default(uuid())
+  tree_id              String
+  tree                 FamilyTree @relation(fields: [tree_id], references: [id], onDelete: Cascade)
+  first_name           String
+  last_name            String?
+  maiden_name          String?
+  nicknames            String[]
+  gender               String?
+  birth_date           DateTime?
+  birth_date_precision String?
+  birth_place          String?
+  death_date           DateTime?
+  death_date_precision String?
+  death_place          String?
+  is_living            Boolean    @default(true)
+  bio                  String?
+  occupation           String?
+  religion             String?
+  nationality          String?
+  languages            String[]
+  cause_of_death       String?
+  burial_place         String?
+  created_by           String?
+  created_at           DateTime   @default(now())
+  updated_at           DateTime   @updatedAt
+
+  relationships_as_a Relationship[] @relation("RelationshipPersonA")
+  relationships_as_b Relationship[] @relation("RelationshipPersonB")
+  life_events        LifeEvent[]
+  media              Media[]
+  stories            Story[]
+  created_by_user    User?          @relation(fields: [created_by], references: [id], onDelete: SetNull)
+
+  @@map("people")
+}
+
+model Relationship {
+  id          String     @id @default(uuid())
+  tree_id     String
+  tree        FamilyTree @relation(fields: [tree_id], references: [id], onDelete: Cascade)
+  person_a_id String
+  person_b_id String
+  type        String
+  start_date  DateTime?
+  end_date    DateTime?
+  status      String?
+  created_at  DateTime   @default(now())
+
+  person_a People @relation("RelationshipPersonA", fields: [person_a_id], references: [id], onDelete: Cascade)
+  person_b People @relation("RelationshipPersonB", fields: [person_b_id], references: [id], onDelete: Cascade)
+
+  @@map("relationships")
+}
+
+model LifeEvent {
+  id          String    @id @default(uuid())
+  person_id   String
+  person      People    @relation(fields: [person_id], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  description String?
+  event_date  DateTime?
+  place       String?
+  created_at  DateTime  @default(now())
+
+  @@map("life_events")
+}
+
+model Media {
+  id            String      @id @default(uuid())
+  tree_id       String
+  tree          FamilyTree  @relation(fields: [tree_id], references: [id], onDelete: Cascade)
+  person_id     String?
+  person        People?     @relation(fields: [person_id], references: [id], onDelete: Cascade)
+  uploaded_by   String
+  uploader      User        @relation(fields: [uploaded_by], references: [id], onDelete: Cascade)
+  type          String
+  file_url      String
+  thumbnail_url String?
+  caption       String?
+  taken_date    DateTime?
+  created_at    DateTime    @default(now())
+
+  @@map("media")
+}
+
+model Source {
+  id         String     @id @default(uuid())
+  tree_id    String
+  tree       FamilyTree @relation(fields: [tree_id], references: [id], onDelete: Cascade)
+  title      String
+  type       String
+  file_url   String?
+  notes      String?
+  confidence String?
+  created_at DateTime   @default(now())
+
+  @@map("sources")
+}
+
+model Story {
+  id         String     @id @default(uuid())
+  tree_id    String
+  tree       FamilyTree @relation(fields: [tree_id], references: [id], onDelete: Cascade)
+  person_id  String
+  person     People     @relation(fields: [person_id], references: [id], onDelete: Cascade)
+  title      String?
+  content    String
+  author_id  String
+  author     User       @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  created_at DateTime   @default(now())
+
+  @@map("stories")
+}

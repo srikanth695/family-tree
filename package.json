@@ -1,0 +1,26 @@
+{
+  "name": "family-tree-app",
+  "private": true,
+  "description": "Monorepo for the Family Tree App",
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev --filter=@family-tree/server --filter=@family-tree/web",
+    "lint": "turbo lint",
+    "test": "npm run test -w @family-tree/server && npm run test -w @family-tree/web",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "db:generate": "npm run db:generate -w @family-tree/database",
+    "db:push": "npm run db:push -w @family-tree/database",
+    "db:seed": "npm run db:seed -w @family-tree/database"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4",
+    "prettier": "^3.5.3"
+  }
+}

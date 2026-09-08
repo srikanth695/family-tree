@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Tree App - UI Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .view { display: none; }
+        .view.active { display: block; }
+    </style>
+</head>
+<body class="bg-stone-100">
+
+    <!-- Navigation Demo Controls -->
+    <div class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-white/80 backdrop-blur-md border border-stone-200 px-4 py-2 rounded-full shadow-sm flex gap-4 text-sm font-medium text-stone-600">
+        <button onclick="showView('landing')" class="hover:text-stone-900 transition-colors">Landing</button>
+        <span class="text-stone-300">|</span>
+        <button onclick="showView('user-login')" class="hover:text-stone-900 transition-colors">User Login</button>
+        <span class="text-stone-300">|</span>
+        <button onclick="showView('admin-login')" class="hover:text-stone-900 transition-colors">Admin Login</button>
+        <span class="text-stone-300">|</span>
+        <button onclick="showView('dashboard')" class="hover:text-stone-900 transition-colors">Dashboard</button>
+    </div>
+
+    <!-- 1. LANDING PAGE -->
+    <div id="landing" class="view active min-h-screen flex flex-col items-center justify-center p-24 space-y-8 bg-white">
+        <div class="text-center space-y-4">
+            <h1 class="text-5xl font-extrabold tracking-tight text-stone-900">Family Tree App</h1>
+            <p class="text-xl text-stone-600 max-w-md">Collaboratively document your genealogy, stories, and heritage.</p>
+        </div>
+        <div class="flex gap-4">
+            <button onclick="showView('dashboard')" class="px-6 py-3 bg-stone-900 text-stone-50 rounded-md font-medium hover:bg-stone-800 transition-colors">Get Started</button>
+            <button onclick="showView('user-login')" class="px-6 py-3 bg-white border border-stone-200 text-stone-900 rounded-md font-medium hover:bg-stone-50 transition-colors">Sign In</button>
+        </div>
+    </div>
+
+    <!-- 2. USER LOGIN PAGE -->
+    <div id="user-login" class="view min-h-screen flex items-center justify-center bg-stone-50 px-4 py-12">
+        <div class="w-full max-w-sm space-y-6 p-8 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-stone-200">
+            <div class="space-y-2 text-center">
+                <h1 class="text-2xl font-semibold tracking-tight text-stone-900">Welcome back</h1>
+                <p class="text-sm text-stone-500">Enter your credentials to access your family tree</p>
+            </div>
+            <form class="space-y-4" onsubmit="event.preventDefault()">
+                <div class="space-y-2">
+                    <input type="email" placeholder="email@example.com" class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-500" />
+                </div>
+                <div class="space-y-2">
+                    <input type="password" placeholder="••••••••" class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-500" />
+                </div>
+                <button type="button" onclick="showView('dashboard')" class="w-full py-2 bg-stone-900 text-stone-50 rounded-md font-medium hover:bg-stone-800 transition-colors">Sign In</button>
+            </form>
+            <div class="relative flex justify-center text-xs uppercase">
+                <span class="bg-white px-2 text-stone-500">Or continue with</span>
+                <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-stone-200"></span></div>
+            </div>
+            <button onclick="showView('dashboard')" class="w-full py-2 border border-stone-200 bg-white text-stone-900 rounded-md font-medium hover:bg-stone-50 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06H2.18C1.43 20.53 1 18.86 1 17s.43-3.45 1.18-4.93l3.66-2.84z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84z" fill="#EA4335"/></svg>
+                Google
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. ADMIN LOGIN PAGE -->
+    <div id="admin-login" class="view min-h-screen flex items-center justify-center bg-stone-950 px-4 py-12">
+        <div class="w-full max-w-sm space-y-6 p-8 bg-stone-900/50 backdrop-blur-md rounded-xl shadow-2xl border border-stone-800 text-white">
+            <div class="space-y-2 text-center">
+                <h1 class="text-2xl font-semibold tracking-tight">Admin Login</h1>
+                <p class="text-sm text-stone-400">Restricted access for authorized administrators</p>
+            </div>
+            <form class="space-y-4" onsubmit="event.preventDefault()">
+                <div class="space-y-2">
+                    <input type="email" placeholder="admin@example.com" class="w-full px-3 py-2 bg-stone-800 border border-stone-700 rounded-md text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-600" />
+                </div>
+                <div class="space-y-2">
+                    <input type="password" placeholder="••••••••" class="w-full px-3 py-2 bg-stone-800 border border-stone-700 rounded-md text-white placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-600" />
+                </div>
+                <button type="button" class="w-full py-2 bg-white text-stone-900 rounded-md font-medium hover:bg-stone-200 transition-colors">Admin Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. DASHBOARD PAGE -->
+    <div id="dashboard" class="view min-h-screen flex flex-col items-center justify-center p-24 bg-white">
+        <div class="text-center space-y-4">
+            <h1 class="text-4xl font-bold text-stone-900">Welcome to your Dashboard</h1>
+            <p class="text-xl text-stone-600">Hello, user@example.com!</p>
+            <p class="text-stone-500">Your family tree is being prepared...</p>
+        </div>
+        <div class="mt-8">
+            <button onclick="showView('landing')" class="text-stone-400 hover:text-stone-600 underline transition-colors">Back to Home</button>
+        </div>
+    </div>
+
+    <script>
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(view => {
+                view.classList.remove('active');
+            });
+            document.getElementById(viewId).classList.add('active');
+        }
+    </script>
+</body>
+</html>
