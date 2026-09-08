@@ -1,0 +1,33 @@
+services:
+  # Do not start the bundled Postgres when using a remote database.
+  db:
+    profiles: ["local-db"]
+
+  api:
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+    environment:
+      # Required: full Postgres URL reachable from the api container
+      # Example (host machine Postgres from Docker Desktop):
+      #   postgresql://postgres:root123@host.docker.internal:5432/family_tree?schema=public
+      # Example (managed cloud):
+      #   postgresql://USER:PASSWORD@HOST:5432/DB?schema=public&sslmode=require
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to your remote Postgres connection string}
+      RUN_DB_MIGRATE: ${RUN_DB_MIGRATE:-true}
+      RUN_DB_SEED: ${RUN_DB_SEED:-false}
+      RUN_DB_PUSH: ${RUN_DB_PUSH:-false}
+      JWT_SECRET: ${JWT_SECRET:-7f9c2e6a4d1b8f03c5e7a9126d4f8b2e9a6c1d7e3f5b8a0c2e4d6f9a1b3c7e5}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:-d3a8f1c6e9b2d5a7f4c8e1b6d9a3f7c2e5b8d1a4c6f9e2b7d5a8c3f6e1}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      UPLOAD_ROOT: ${UPLOAD_ROOT:-/app/uploads}
+
+  web:
+    environment:
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change_me_nextauth_secret}
+      INTERNAL_AUTH_SECRET: ${INTERNAL_AUTH_SECRET:-d3a8f1c6e9b2d5a7f4c8e1b6d9a3f7c2e5b8d1a4c6f9e2b7d5a8c3f6e1}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3001}

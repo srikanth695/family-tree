@@ -33,9 +33,11 @@ api.interceptors.response.use(
 
 export default api
 
-export function mediaUrl(fileUrl?: string | null) {
-  if (!fileUrl) return ""
-  if (fileUrl.startsWith("http")) return fileUrl
+/** Authenticated media content URL (requires JWT via header or access_token query). */
+export function mediaFileUrl(mediaId?: string | null, accessToken?: string | null) {
+  if (!mediaId) return ""
   const base = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:3001"
-  return `${base}${fileUrl}`
+  const url = `${base}/media/${mediaId}/file`
+  if (!accessToken) return url
+  return `${url}?access_token=${encodeURIComponent(accessToken)}`
 }

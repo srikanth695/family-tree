@@ -1,8 +1,18 @@
-import { PrismaClient } from '../generated/client'
+import 'dotenv/config'
+import { PrismaPg } from '@prisma/adapter-pg'
 import * as bcrypt from 'bcrypt'
+import { Pool } from 'pg'
+import { PrismaClient } from '../generated/client/client'
 
-const prisma = new PrismaClient()
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const prisma = new PrismaClient({ adapter: new PrismaPg(pool) })
 
+/**
+ * Local/demo seed only. Do not enable in production with real users.
+ * Default accounts (created once; passwords are NOT reset on later runs):
+ * - admin@example.com / adminpassword123 (admin)
+ * - demo@family.local / demo12345 (user)
+ */
 async function main() {
   const demoPassword = await bcrypt.hash('demo12345', 10)
   const adminPassword = await bcrypt.hash('adminpassword123', 10)
@@ -12,7 +22,7 @@ async function main() {
     update: {
       role: 'admin',
       name: 'Platform Admin',
-      password_hash: adminPassword,
+      // Do not overwrite password_hash — preserves user-changed passwords across restarts
     },
     create: {
       email: 'admin@example.com',
@@ -88,15 +98,14 @@ async function main() {
     })
   }
 
-  // Ensure admin can access demo tree
   await prisma.treeMember.upsert({
     where: { tree_id_user_id: { tree_id: tree.id, user_id: admin.id } },
     update: { role: 'owner' },
     create: { tree_id: tree.id, user_id: admin.id, role: 'owner' },
   })
 
-  console.log('Seeded admin@example.com / adminpassword123 (role: admin)')
-  console.log('Seeded demo@family.local / demo12345 (role: user)')
+  console.log('Seed ensured admin@example.com (role: admin) and demo@family.local (role: user)')
+  console.log('Passwords are set only on first create (adminpassword123 / demo12345)')
 }
 
 main()
@@ -106,4 +115,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect()
+    await pool.end()
   })

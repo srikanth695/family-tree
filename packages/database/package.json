@@ -1,26 +1,28 @@
 {
   "name": "@family-tree/database",
   "version": "0.1.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "scripts": {
-    "postinstall": "node scripts/link-prisma-client.js && prisma generate || exit 0",
-    "build": "node scripts/link-prisma-client.js && prisma generate && tsc",
-    "db:generate": "node scripts/link-prisma-client.js && prisma generate",
+    "postinstall": "prisma generate || exit 0",
+    "build": "prisma generate && tsc",
+    "db:generate": "prisma generate",
     "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
-    "@prisma/client": "5.22.0"
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
+    "pg": "^8.23.0",
+    "prisma": "^7.10.0",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
-    "bcrypt": "^6.0.0",
-    "prisma": "5.22.0",
-    "tsx": "^4.20.0",
-    "typescript": "^5.8.3"
+    "@types/bcrypt": "^6.0.0",
+    "@types/pg": "^8.15.5",
+    "typescript": "~5.9.3"
   }
 }

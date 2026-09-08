@@ -1,8 +1,7 @@
-version: "3.8"
-
 services:
   db:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: root123
@@ -15,7 +14,52 @@ services:
       test: ["CMD-SHELL", "pg_isready -U postgres -d family_tree"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: "3001"
+      DATABASE_URL: postgresql://postgres:root123@db:5432/family_tree?schema=public
+      JWT_SECRET: 7f9c2e6a4d1b8f03c5e7a9126d4f8b2e9a6c1d7e3f5b8a0c2e4d6f9a1b3c7e5
+      INTERNAL_AUTH_SECRET: d3a8f1c6e9b2d5a7f4c8e1b6d9a3f7c2e5b8d1a4c6f9e2b7d5a8c3f6e1
+      NEXTAUTH_URL: http://localhost:3000
+      WEB_ORIGIN: http://localhost:3000
+      UPLOAD_ROOT: /app/uploads
+      RUN_DB_MIGRATE: "true"
+      RUN_DB_PUSH: "false"
+      RUN_DB_SEED: "true"
+    ports:
+      - "3001:3001"
+    volumes:
+      - api_uploads:/app/uploads
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: change_me_nextauth_secret
+      INTERNAL_AUTH_SECRET: d3a8f1c6e9b2d5a7f4c8e1b6d9a3f7c2e5b8d1a4c6f9e2b7d5a8c3f6e1
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      API_INTERNAL_URL: http://api:3001
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:
+  api_uploads:

@@ -2,7 +2,10 @@ import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+const apiUrl =
+  process.env.API_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:3001"
 
 async function loginWithApi(email: string, password: string) {
   const res = await fetch(`${apiUrl}/auth/login`, {

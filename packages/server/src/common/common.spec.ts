@@ -18,6 +18,16 @@ describe('jwt secret helpers', () => {
     expect(getInternalAuthSecret()).toBe('internal')
     process.env.INTERNAL_AUTH_SECRET = previous
   })
+
+  it('fails in production when JWT_SECRET is missing', () => {
+    const previousEnv = process.env.NODE_ENV
+    const previousSecret = process.env.JWT_SECRET
+    process.env.NODE_ENV = 'production'
+    delete process.env.JWT_SECRET
+    expect(() => getJwtSecret()).toThrow(/JWT_SECRET must be set/)
+    process.env.NODE_ENV = previousEnv
+    process.env.JWT_SECRET = previousSecret
+  })
 })
 
 describe('toPublicUser', () => {

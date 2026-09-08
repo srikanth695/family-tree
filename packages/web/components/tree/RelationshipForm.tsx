@@ -24,17 +24,17 @@ const relationshipSchema = z
   .superRefine((values, ctx) => {
     if (values.type === "parents") {
       if (!values.child_id) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Required", path: ["child_id"] })
+        ctx.addIssue({ code: "custom", message: "Required", path: ["child_id"] })
       }
       if (!values.father_id) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Required", path: ["father_id"] })
+        ctx.addIssue({ code: "custom", message: "Required", path: ["father_id"] })
       }
       if (!values.mother_id) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Required", path: ["mother_id"] })
+        ctx.addIssue({ code: "custom", message: "Required", path: ["mother_id"] })
       }
       if (values.father_id && values.mother_id && values.father_id === values.mother_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "Father and mother must be different",
           path: ["mother_id"],
         })
@@ -43,14 +43,14 @@ const relationshipSchema = z
     }
 
     if (!values.person_a_id) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Required", path: ["person_a_id"] })
+      ctx.addIssue({ code: "custom", message: "Required", path: ["person_a_id"] })
     }
     if (!values.person_b_id) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Required", path: ["person_b_id"] })
+      ctx.addIssue({ code: "custom", message: "Required", path: ["person_b_id"] })
     }
     if (values.person_a_id && values.person_b_id && values.person_a_id === values.person_b_id) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Choose two different people",
         path: ["person_b_id"],
       })

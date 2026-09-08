@@ -9,11 +9,14 @@ import {
   Request,
   UploadedFile,
   UseInterceptors,
+  Res,
+  Header,
 } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import type { Response } from 'express';
 
 @Controller('media')
 @UseGuards(JwtAuthGuard)
@@ -39,6 +42,14 @@ export class MediaController {
   @Get('tree/:treeId')
   findAllByTree(@Param('treeId') treeId: string, @Request() req) {
     return this.mediaService.findAllByTree(treeId, req.user.id);
+  }
+
+  @Get(':id/file')
+  async streamFile(@Param('id') id: string, @Request() req, @Res({ passthrough: true }) res: Response) {
+    const { file, mime } = await this.mediaService.streamFile(id, req.user.id);
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return file;
   }
 
   @Delete(':id')

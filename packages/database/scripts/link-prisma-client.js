@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { execSync } = require('child_process')
 
-const pkgRoot = path.join(__dirname)
+const pkgRoot = path.resolve(__dirname, '..')
 const nestedClient = path.join(pkgRoot, 'node_modules', '@prisma', 'client')
 const rootClient = path.resolve(pkgRoot, '..', '..', 'node_modules', '@prisma', 'client')
 

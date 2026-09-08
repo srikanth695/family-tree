@@ -10,7 +10,7 @@ import { useTrees } from "@/hooks/use-trees"
 import { useSession } from "next-auth/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, Image as ImageIcon } from "lucide-react"
-import { mediaUrl } from "@/lib/api"
+import { mediaFileUrl } from "@/lib/api"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { hasRight, relationshipLabel } from "@family-tree/types"
@@ -59,6 +59,9 @@ export function PersonDetails({
   const { trees, createTree } = useTrees()
   const { data: session } = useSession()
   const canCreateTrees = hasRight(session?.user?.role, "create_family_tree")
+  const accessToken =
+    session?.user?.accessToken ||
+    (session as { accessToken?: string } | null)?.accessToken
 
   const [title, setTitle] = React.useState("")
   const [deleting, setDeleting] = React.useState(false)
@@ -695,12 +698,12 @@ export function PersonDetails({
                 <div key={item.id} className="relative aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
                   {item.type === "photo" ? (
                     <img
-                      src={mediaUrl(item.file_url)}
+                      src={mediaFileUrl(item.id, accessToken)}
                       alt={item.caption || "Family photo"}
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <a className="flex h-full items-center justify-center p-2 text-sm underline" href={mediaUrl(item.file_url)} target="_blank" rel="noreferrer">
+                    <a className="flex h-full items-center justify-center p-2 text-sm underline" href={mediaFileUrl(item.id, accessToken)} target="_blank" rel="noreferrer">
                       {item.caption || "Document"}
                     </a>
                   )}

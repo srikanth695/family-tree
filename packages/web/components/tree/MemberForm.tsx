@@ -16,12 +16,7 @@ const personSchema = z
     first_name: z.string().min(1, "First name is required"),
     last_name: z.string().optional(),
     maiden_name: z.string().optional(),
-    gender: z
-      .string()
-      .min(1, "Gender is required")
-      .refine((value): value is "male" | "female" => value === "male" || value === "female", {
-        message: "Select male or female",
-      }),
+    gender: z.enum(["male", "female", ""]),
     birth_date: z.string().min(1, "Birth date is required"),
     death_date: z.string().optional(),
     is_child: z.boolean().optional(),
@@ -29,16 +24,19 @@ const personSchema = z
     mother_id: z.string().optional(),
   })
   .superRefine((values, ctx) => {
+    if (!values.gender) {
+      ctx.addIssue({ code: "custom", message: "Select male or female", path: ["gender"] })
+    }
     if (!values.is_child) return
     if (!values.father_id) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Father is required for a child", path: ["father_id"] })
+      ctx.addIssue({ code: "custom", message: "Father is required for a child", path: ["father_id"] })
     }
     if (!values.mother_id) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Mother is required for a child", path: ["mother_id"] })
+      ctx.addIssue({ code: "custom", message: "Mother is required for a child", path: ["mother_id"] })
     }
     if (values.father_id && values.mother_id && values.father_id === values.mother_id) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Father and mother must be different people",
         path: ["mother_id"],
       })
@@ -176,6 +174,10 @@ export function MemberForm({
   }, [open, familyNames.length])
 
   async function onSubmit(values: PersonFormValues) {
+    if (values.gender !== "male" && values.gender !== "female") {
+      alert("Select male or female")
+      return
+    }
     const typedName = familyNameMode === "new" ? newFamilyName : values.last_name
     const lastName = rememberFamilyName(typedName || "")
 

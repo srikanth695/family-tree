@@ -12,18 +12,19 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { getInternalAuthSecret } from '../common/jwt-secret';
 import { toPublicUser } from '../common/public-user';
+import { LoginDto, OAuthUpsertDto, RegisterDto } from '../common/dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  async register(@Body() body: { email?: string; password?: string; name?: string }) {
+  async register(@Body() body: RegisterDto) {
     return this.authService.register(body);
   }
 
   @Post('login')
-  async login(@Body() body: { email?: string; password?: string }) {
+  async login(@Body() body: LoginDto) {
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
@@ -33,7 +34,7 @@ export class AuthController {
 
   @Post('oauth')
   async oauth(
-    @Body() body: { email?: string; name?: string; avatar_url?: string },
+    @Body() body: OAuthUpsertDto,
     @Headers('x-internal-secret') secret: string,
   ) {
     if (!secret || secret !== getInternalAuthSecret()) {
