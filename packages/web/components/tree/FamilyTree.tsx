@@ -17,15 +17,21 @@ import ReactFlow, {
 } from "reactflow"
 import "reactflow/dist/style.css"
 import {
+  clearSavedLayout,
   getSiblingGroups,
   junctionPosition,
   layoutFamilyTree,
+  layoutStructureKey,
   loadSavedPositions,
+  loadSavedStructureKey,
   savePositions,
+  saveStructureKey,
   shortRelationshipLabel,
   spouseRelationshipLabel,
   TreePosition,
 } from "@/lib/layout-family-tree"
+import { titleCaseWords } from "@/lib/utils"
+import { useTheme } from "@/components/theme-provider"
 
 interface PersonNodeData {
   firstName: string
@@ -43,15 +49,15 @@ const PersonNode = ({ data }: { data: PersonNodeData }) => {
 
   return (
     <div
-      className={`min-w-[180px] max-w-[220px] cursor-grab rounded-lg border-2 bg-white px-3 py-2 text-center shadow-sm active:cursor-grabbing ${border}`}
+      className={`min-w-[180px] max-w-[220px] cursor-grab rounded-lg border-2 bg-white px-3 py-2 text-center shadow-sm active:cursor-grabbing dark:bg-stone-800 ${border}`}
     >
       <Handle id="top" type="target" position={Position.Top} className="!h-2 !w-2 !bg-stone-500" />
       <Handle id="left" type="target" position={Position.Left} className="!h-2 !w-2 !bg-stone-500" />
-      <div className="truncate text-sm font-semibold text-stone-900">
-        {data.firstName} {data.lastName}
+      <div className="truncate text-sm font-semibold text-stone-900 dark:text-stone-50">
+        {titleCaseWords(data.firstName)} {titleCaseWords(data.lastName)}
       </div>
       {data.gender && (
-        <div className="text-[10px] font-medium uppercase tracking-wide text-stone-500">{data.gender}</div>
+        <div className="text-[10px] font-medium uppercase tracking-wide text-stone-500 dark:text-stone-400">{data.gender}</div>
       )}
       <Handle id="right" type="source" position={Position.Right} className="!h-2 !w-2 !bg-stone-500" />
       <Handle id="bottom" type="source" position={Position.Bottom} className="!h-2 !w-2 !bg-stone-500" />
@@ -193,10 +199,15 @@ function buildGraph(
     if (rel.type === "spouse") {
       const personA = (people || []).find((p) => p.id === rel.person_a_id)
       const personB = (people || []).find((p) => p.id === rel.person_b_id)
+      const posA = positions[rel.person_a_id]
+      const posB = positions[rel.person_b_id]
+      const aIsLeft = (posA?.x ?? 0) <= (posB?.x ?? 0)
+      const leftId = aIsLeft ? rel.person_a_id : rel.person_b_id
+      const rightId = aIsLeft ? rel.person_b_id : rel.person_a_id
       edges.push({
         id: `edge-${rel.id}`,
-        source: rel.person_a_id,
-        target: rel.person_b_id,
+        source: leftId,
+        target: rightId,
         sourceHandle: "right",
         targetHandle: "left",
         label: spouseRelationshipLabel(personA?.gender, personB?.gender),
@@ -260,10 +271,12 @@ const PARENT_TYPES_LOCAL = new Set([
 function resolvePosition(
   id: string,
   live: Record<string, TreePosition>,
-  saved: Record<string, TreePosition>,
+  saved: Record<string, TreePosition> | null,
   auto: Record<string, TreePosition>,
 ): TreePosition {
-  return live[id] || saved[id] || auto[id] || { x: 0, y: 0 }
+  if (live[id]) return live[id]
+  if (saved?.[id]) return saved[id]
+  return auto[id] || { x: 0, y: 0 }
 }
 
 export default function FamilyTree({
@@ -272,6 +285,7 @@ export default function FamilyTree({
   relationships,
   onNodeClick: handleNodeClick,
 }: FamilyTreeProps) {
+  const { theme } = useTheme()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const rfRef = useRef<ReactFlowInstance | null>(null)
@@ -281,6 +295,11 @@ export default function FamilyTree({
   const draggingRef = useRef(false)
   relationshipsRef.current = relationships
   nodesRef.current = nodes
+
+  const structureKey = useMemo(
+    () => layoutStructureKey(people || [], relationships || []),
+    [people, relationships],
+  )
 
   const autoLayout = useMemo(
     () => layoutFamilyTree(people || [], relationships || []),
@@ -298,6 +317,25 @@ export default function FamilyTree({
 
   useEffect(() => {
     if (draggingRef.current) return
+
+    const previousKey = loadSavedStructureKey(treeId)
+    // Missing key is first visit after this feature, not a real structure change.
+    // Wiping here would throw away existing custom positions (and Strict Mode remounts).
+    if (previousKey && previousKey !== structureKey) {
+      clearSavedLayout(treeId)
+      saveStructureKey(treeId, structureKey)
+      rebuildFromPersonPositions(autoLayout)
+      fittedForTree.current = null
+      window.setTimeout(() => {
+        rfRef.current?.fitView({ padding: 0.2, duration: 200 })
+        fittedForTree.current = treeId
+      }, 50)
+      return
+    }
+    if (previousKey !== structureKey) {
+      saveStructureKey(treeId, structureKey)
+    }
+
     const saved = loadSavedPositions(treeId)
     const live = personPositionsFromNodes(nodesRef.current)
     const positions: Record<string, TreePosition> = {}
@@ -305,7 +343,7 @@ export default function FamilyTree({
       positions[person.id] = resolvePosition(person.id, live, saved, autoLayout)
     }
     rebuildFromPersonPositions(positions)
-  }, [people, relationships, treeId, autoLayout, rebuildFromPersonPositions])
+  }, [people, relationships, treeId, structureKey, autoLayout, rebuildFromPersonPositions])
 
   useEffect(() => {
     if (!people?.length) return
@@ -381,15 +419,15 @@ export default function FamilyTree({
       const merged = mergeDraggedIntoNodes({ ...draggedNode, dragging: false })
       const personPositions = syncGraphFromNodes(merged)
       savePositions(treeId, personPositions)
+      saveStructureKey(treeId, structureKey)
       draggingRef.current = false
     },
-    [mergeDraggedIntoNodes, syncGraphFromNodes, treeId],
+    [mergeDraggedIntoNodes, syncGraphFromNodes, treeId, structureKey],
   )
 
   const resetLayout = () => {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(`family-tree-positions:${treeId}`)
-    }
+    clearSavedLayout(treeId)
+    saveStructureKey(treeId, structureKey)
     rebuildFromPersonPositions(autoLayout)
     fittedForTree.current = null
     window.setTimeout(() => {
@@ -400,14 +438,14 @@ export default function FamilyTree({
 
   return (
     <div className="relative h-full w-full">
-      <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-md bg-white/90 px-3 py-2 text-xs text-stone-600 shadow-sm ring-1 ring-stone-200">
-        Parents connect through a shared line to children; siblings are linked. Drag people with the left mouse button; pan with middle or right mouse.
+      <div className="pointer-events-none absolute left-4 top-4 z-10 max-w-sm rounded-md bg-white/90 px-3 py-2 text-xs leading-relaxed text-stone-600 shadow-sm ring-1 ring-stone-200 dark:bg-stone-900/90 dark:text-stone-300 dark:ring-stone-700">
+        Generations align top-to-bottom. Drag people to adjust; layout resets automatically when people or relationships change.
       </div>
       <div className="absolute right-4 top-4 z-10 flex gap-2">
         <button
           type="button"
           onClick={resetLayout}
-          className="rounded-md border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-sm hover:bg-stone-50"
+          className="min-h-11 cursor-pointer rounded-md border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-700 shadow-sm hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
         >
           Reset layout
         </button>
@@ -441,7 +479,7 @@ export default function FamilyTree({
           interactionWidth: 24,
         }}
       >
-        <Background color="#d6d3d1" gap={18} />
+        <Background color={theme === "dark" ? "#57534e" : "#d6d3d1"} gap={18} />
         <Controls showInteractive={false} />
         <MiniMap
           nodeStrokeColor="#a8a29e"
@@ -453,7 +491,7 @@ export default function FamilyTree({
                 ? "#bae6fd"
                 : "#e7e5e4"
           }}
-          maskColor="rgb(250, 250, 249, 0.7)"
+          maskColor={theme === "dark" ? "rgb(28, 25, 23, 0.7)" : "rgb(250, 250, 249, 0.7)"}
         />
       </ReactFlow>
     </div>

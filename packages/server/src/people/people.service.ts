@@ -1,9 +1,11 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import prisma from '@family-tree/database';
 import { AccessService } from '../common/access.service';
+import { familyNameKey, personAppearsOnTree } from '../common/family-name';
 import { pick, PERSON_FIELDS } from '../common/pick';
 import { sanitizePersonInput } from '../common/sanitize';
 import { ensureSiblingLinks } from '../common/siblings';
+import { loadPeopleVisibleOnTree } from '../common/tree-members';
 
 @Injectable()
 export class PeopleService {
@@ -87,7 +89,7 @@ export class PeopleService {
   ) {
     if (fatherId) {
       const father = await prisma.people.findUnique({ where: { id: fatherId } });
-      if (!father || father.tree_id !== treeId) {
+      if (!father || !(await this.personInTree(father, treeId))) {
         throw new NotFoundException('Father not found in this tree');
       }
       if (father.gender !== 'male') {
@@ -96,7 +98,7 @@ export class PeopleService {
     }
     if (motherId) {
       const mother = await prisma.people.findUnique({ where: { id: motherId } });
-      if (!mother || mother.tree_id !== treeId) {
+      if (!mother || !(await this.personInTree(mother, treeId))) {
         throw new NotFoundException('Mother not found in this tree');
       }
       if (mother.gender !== 'female') {
@@ -107,10 +109,30 @@ export class PeopleService {
 
   async findAll(treeId: string, userId: string) {
     await this.access.requireMembership(treeId, userId);
-    return prisma.people.findMany({
-      where: { tree_id: treeId },
-      orderBy: { created_at: 'asc' },
+    const tree = await prisma.familyTree.findUnique({ where: { id: treeId } });
+    if (!tree) {
+      throw new NotFoundException('Family tree not found');
+    }
+    const systemRole = await this.access.getUserRole(userId);
+    const accessibleIds = systemRole === 'admin' ? null : await this.accessibleTreeIds(userId);
+    return loadPeopleVisibleOnTree(treeId, accessibleIds);
+  }
+
+  private async accessibleTreeIds(userId: string) {
+    const trees = await prisma.familyTree.findMany({
+      where: { OR: [{ owner_id: userId }, { members: { some: { user_id: userId } } }] },
+      select: { id: true },
     });
+    return trees.map((tree) => tree.id);
+  }
+
+  private async personInTree(
+    person: { tree_id: string; last_name?: string | null; maiden_name?: string | null },
+    treeId: string,
+  ) {
+    const tree = await prisma.familyTree.findUnique({ where: { id: treeId } });
+    if (!tree) return false;
+    return personAppearsOnTree(person, treeId, familyNameKey(tree.name));
   }
 
   async findOne(id: string, userId: string) {
@@ -135,7 +157,8 @@ export class PeopleService {
   }
 
   async delete(id: string, userId: string) {
-    await this.access.requirePersonAccess(id, userId, true);
+    const person = await this.access.requirePersonAccess(id, userId, false);
+    await this.access.requireDeletePerson(userId);
 
     return prisma.$transaction(async (tx) => {
       await tx.relationship.deleteMany({
@@ -146,7 +169,7 @@ export class PeopleService {
       await tx.lifeEvent.deleteMany({ where: { person_id: id } });
       await tx.story.deleteMany({ where: { person_id: id } });
       await tx.media.deleteMany({ where: { person_id: id } });
-      return tx.people.delete({ where: { id } });
+      return tx.people.delete({ where: { id: person.id } });
     });
   }
 }

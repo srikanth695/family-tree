@@ -60,12 +60,30 @@ export function useTrees() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: async (treeId: string) => {
+      const { data } = await api.delete(`/trees/${treeId}`)
+      return data as { id: string; deleted: boolean; name?: string; people_removed?: number }
+    },
+    onSuccess: (_data, treeId) => {
+      queryClient.setQueryData<FamilyTreeRecord[] | undefined>(
+        ["trees", session?.user?.id],
+        (current) => (current || []).filter((tree) => tree.id !== treeId),
+      )
+      queryClient.invalidateQueries({ queryKey: ["trees"] })
+      queryClient.removeQueries({ queryKey: ["people", treeId] })
+      queryClient.removeQueries({ queryKey: ["relationships", treeId] })
+      queryClient.removeQueries({ queryKey: ["tree", treeId] })
+    },
+  })
+
   return {
     trees: query.data,
     isLoading: status === "loading" || (hasToken && query.isLoading),
     isError: query.isError,
     hasToken,
     createTree: createMutation.mutateAsync,
+    deleteTree: deleteMutation.mutateAsync,
     refetchTrees: query.refetch,
   }
 }

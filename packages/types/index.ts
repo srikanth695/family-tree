@@ -49,7 +49,7 @@ export const ROLE_RIGHTS: Record<SystemRole, RoleRights> = {
     manage_users: false,
     manage_roles: false,
     create_family_tree: true,
-    delete_family_tree: true,
+    delete_family_tree: false,
     manage_tree_members: true,
     edit_family_data: true,
     view_family_trees: true,
@@ -82,9 +82,9 @@ export const ROLE_LABELS: Record<SystemRole, string> = {
 }
 
 export const ROLE_DESCRIPTIONS: Record<SystemRole, string> = {
-  admin: 'Full access: manage users/roles, create trees, and edit all family data.',
-  family_tree_admin: 'Create and manage family trees, invite members, and edit family data.',
-  family_admin: 'Edit people and relationships in trees they belong to. Cannot create trees.',
+  admin: 'Full access: manage users/roles, create and delete trees, and delete people.',
+  family_tree_admin: 'Create and manage family trees, invite members, and edit family data. Cannot delete trees or people.',
+  family_admin: 'Edit people and relationships in trees they belong to. Cannot create or delete trees.',
   user: 'View family trees they belong to. Cannot create trees or edit family data.',
 }
 

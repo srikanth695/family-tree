@@ -1,19 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import prisma from '@family-tree/database';
 import { AccessService } from '../common/access.service';
+import { familyNameKey, normalizeFamilyName, personAppearsOnTree } from '../common/family-name';
 import { ALL_ROLES } from '../common/pick';
-
-function normalizeFamilyName(value: string) {
-  return value
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/\s+family\s+tree$/i, '')
-    .trim();
-}
-
-function familyNameKey(value: string) {
-  return normalizeFamilyName(value).toLocaleLowerCase();
-}
 
 @Injectable()
 export class TreesService {
@@ -66,10 +55,14 @@ export class TreesService {
       // Listing should still work even if auto-create fails.
     }
 
+    const systemRole = await this.access.getUserRole(userId);
     const trees = await prisma.familyTree.findMany({
-      where: {
-        OR: [{ owner_id: userId }, { members: { some: { user_id: userId } } }],
-      },
+      where:
+        systemRole === 'admin'
+          ? undefined
+          : {
+              OR: [{ owner_id: userId }, { members: { some: { user_id: userId } } }],
+            },
       include: {
         members: true,
         _count: { select: { people: true } },
@@ -87,13 +80,27 @@ export class TreesService {
       }
     }
 
-    return Array.from(byKey.values())
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-      .map((tree) => ({
+    const listed = Array.from(byKey.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+    );
+    const people = await prisma.people.findMany({
+      where:
+        systemRole === 'admin'
+          ? undefined
+          : { tree_id: { in: listed.map((tree) => tree.id) } },
+      select: { tree_id: true, last_name: true, maiden_name: true },
+    });
+
+    return listed.map((tree) => {
+      const key = familyNameKey(tree.name);
+      const peopleCount = people.filter((person) => personAppearsOnTree(person, tree.id, key)).length;
+      return {
         ...tree,
         family_name: normalizeFamilyName(tree.name),
         display_name: `${normalizeFamilyName(tree.name)} family tree`,
-      }));
+        _count: { ...tree._count, people: peopleCount },
+      };
+    });
   }
 
   private async findAccessibleTreeByFamilyName(userId: string, familyName: string) {
@@ -181,6 +188,25 @@ export class TreesService {
         _count: { select: { people: true } },
       },
     });
+  }
+
+  async delete(treeId: string, userId: string) {
+    await this.access.requireDeleteFamilyTree(userId);
+    const tree = await prisma.familyTree.findUnique({
+      where: { id: treeId },
+      include: { _count: { select: { people: true } } },
+    });
+    if (!tree) {
+      throw new NotFoundException('Family tree not found');
+    }
+
+    await prisma.familyTree.delete({ where: { id: treeId } });
+    return {
+      id: treeId,
+      deleted: true,
+      name: tree.name,
+      people_removed: tree._count.people,
+    };
   }
 
   async addMember(treeId: string, actorId: string, email: string, role: string) {

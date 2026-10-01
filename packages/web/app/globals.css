@@ -1,1 +1,30 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark .react-flow {
+  background-color: #1c1917;
+}
+
+.dark .react-flow__controls {
+  box-shadow: 0 0 2px 1px rgb(28 25 23 / 0.6);
+}
+
+.dark .react-flow__controls-button {
+  background: #292524;
+  border-bottom-color: #44403c;
+  fill: #e7e5e4;
+}
+
+.dark .react-flow__controls-button:hover {
+  background: #44403c;
+}
+
+.dark .react-flow__minimap {
+  background-color: #292524;
+}
+
+.dark .react-flow__attribution {
+  background: transparent;
+  color: #a8a29e;
+}

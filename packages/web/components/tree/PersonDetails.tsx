@@ -14,8 +14,9 @@ import { mediaFileUrl } from "@/lib/api"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { hasRight, relationshipLabel } from "@family-tree/types"
+import { titleCaseWords } from "@/lib/utils"
 
-const selectClassName = "w-full rounded-md border border-stone-200 bg-white px-2 py-1.5 text-sm"
+const selectClassName = "w-full rounded-md border border-stone-200 bg-white px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
 
 const EDITABLE_REL_TYPES = [
   "father-child",
@@ -27,7 +28,8 @@ const EDITABLE_REL_TYPES = [
 ] as const
 
 function personLabel(person: any) {
-  return `${person.first_name || ""} ${person.last_name || ""}`.trim() || "Unknown"
+  const name = titleCaseWords(`${person.first_name || ""} ${person.last_name || ""}`)
+  return name || "Unknown"
 }
 
 function toDateInput(value?: string | null) {
@@ -59,6 +61,7 @@ export function PersonDetails({
   const { trees, createTree } = useTrees()
   const { data: session } = useSession()
   const canCreateTrees = hasRight(session?.user?.role, "create_family_tree")
+  const isFullAdmin = session?.user?.role === "admin"
   const accessToken =
     session?.user?.accessToken ||
     (session as { accessToken?: string } | null)?.accessToken
@@ -221,11 +224,11 @@ export function PersonDetails({
       await updatePerson({
         id: person.id,
         data: {
-          first_name: personForm.first_name.trim(),
-          last_name: personForm.last_name.trim() || undefined,
+          first_name: titleCaseWords(personForm.first_name),
+          last_name: titleCaseWords(personForm.last_name) || undefined,
           maiden_name:
             personForm.gender === "female"
-              ? personForm.maiden_name.trim() || undefined
+              ? titleCaseWords(personForm.maiden_name) || undefined
               : undefined,
           gender: personForm.gender,
           birth_date: personForm.birth_date,
@@ -327,32 +330,36 @@ export function PersonDetails({
 
   return (
     <div className="space-y-6">
-      <section className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm text-stone-600">
+      <section className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm text-stone-600 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
         {!editingPerson ? (
           <>
-            <p>
-              <span className="font-medium text-stone-900">Gender:</span>{" "}
-              {person.gender === "male" || person.gender === "female"
-                ? person.gender.charAt(0).toUpperCase() + person.gender.slice(1)
-                : "Not set"}
-            </p>
-            <p>
-              <span className="font-medium text-stone-900">Family name:</span>{" "}
-              {person.last_name || "Not set"}
-            </p>
-            {person.gender === "female" && (
+            {(person.gender === "male" || person.gender === "female") && (
               <p>
-                <span className="font-medium text-stone-900">Parental family name:</span>{" "}
-                {person.maiden_name || "Not set"}
+                <span className="font-medium text-stone-900 dark:text-stone-100">Gender:</span>{" "}
+                {person.gender.charAt(0).toUpperCase() + person.gender.slice(1)}
               </p>
             )}
-            <p>
-              <span className="font-medium text-stone-900">Born:</span>{" "}
-              {person.birth_date ? new Date(person.birth_date).toLocaleDateString() : "Unknown"}
-            </p>
+            {person.last_name && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Family name:</span>{" "}
+                {titleCaseWords(person.last_name)}
+              </p>
+            )}
+            {person.gender === "female" && person.maiden_name && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Parental family name:</span>{" "}
+                {titleCaseWords(person.maiden_name)}
+              </p>
+            )}
+            {person.birth_date && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Born:</span>{" "}
+                {new Date(person.birth_date).toLocaleDateString()}
+              </p>
+            )}
             {person.death_date && (
               <p>
-                <span className="font-medium text-stone-900">Died:</span>{" "}
+                <span className="font-medium text-stone-900 dark:text-stone-100">Died:</span>{" "}
                 {new Date(person.death_date).toLocaleDateString()}
               </p>
             )}
@@ -361,8 +368,8 @@ export function PersonDetails({
             </Button>
           </>
         ) : (
-          <form onSubmit={onSavePerson} className="space-y-2 rounded-md border border-stone-200 bg-white p-3">
-            <p className="text-sm font-medium text-stone-900">Edit person</p>
+          <form onSubmit={onSavePerson} className="space-y-2 rounded-md border border-stone-200 bg-white p-3 dark:border-stone-700 dark:bg-stone-900">
+            <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Edit person</p>
             <div className="space-y-1">
               <label className="text-xs font-medium" htmlFor="edit-first-name">First name</label>
               <Input
@@ -389,7 +396,7 @@ export function PersonDetails({
                   onChange={(e) => setPersonForm((p) => ({ ...p, maiden_name: e.target.value }))}
                   placeholder="Wife's birth / parental family name"
                 />
-                <p className="text-[11px] text-stone-500">
+                <p className="text-[11px] text-stone-500 dark:text-stone-400">
                   Use this to connect her to a different family tree (parental side).
                 </p>
               </div>
@@ -436,50 +443,68 @@ export function PersonDetails({
           </form>
         )}
 
-        <div className="border-t border-stone-200 pt-2">
-          <p>
-            <span className="font-medium text-stone-900">Father:</span>{" "}
-            {family.father ? personLabel(family.father) : "Not linked"}
-          </p>
-          <p>
-            <span className="font-medium text-stone-900">Mother:</span>{" "}
-            {family.mother ? personLabel(family.mother) : "Not linked"}
-          </p>
-          <p>
-            <span className="font-medium text-stone-900">Husband:</span>{" "}
-            {husbands.length > 0 ? husbands.map(personLabel).join(", ") : "None"}
-          </p>
-          <p>
-            <span className="font-medium text-stone-900">Wife:</span>{" "}
-            {wives.length > 0 ? wives.map(personLabel).join(", ") : "None"}
-          </p>
-          {otherSpouses.length > 0 && (
-            <p>
-              <span className="font-medium text-stone-900">Spouse:</span>{" "}
-              {otherSpouses.map(personLabel).join(", ")}
-            </p>
-          )}
-          <p>
-            <span className="font-medium text-stone-900">Children:</span>{" "}
-            {family.children.length > 0 ? family.children.map(personLabel).join(", ") : "None"}
-          </p>
-          <p>
-            <span className="font-medium text-stone-900">Siblings:</span>{" "}
-            {family.siblings.length > 0 ? family.siblings.map(personLabel).join(", ") : "None"}
-          </p>
-        </div>
+        {(family.father ||
+          family.mother ||
+          husbands.length > 0 ||
+          wives.length > 0 ||
+          otherSpouses.length > 0 ||
+          family.children.length > 0 ||
+          family.siblings.length > 0) && (
+          <div className="border-t border-stone-200 pt-2 dark:border-stone-700">
+            {family.father && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Father:</span> {personLabel(family.father)}
+              </p>
+            )}
+            {family.mother && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Mother:</span> {personLabel(family.mother)}
+              </p>
+            )}
+            {husbands.length > 0 && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Husband:</span>{" "}
+                {husbands.map(personLabel).join(", ")}
+              </p>
+            )}
+            {wives.length > 0 && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Wife:</span>{" "}
+                {wives.map(personLabel).join(", ")}
+              </p>
+            )}
+            {otherSpouses.length > 0 && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Spouse:</span>{" "}
+                {otherSpouses.map(personLabel).join(", ")}
+              </p>
+            )}
+            {family.children.length > 0 && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Children:</span>{" "}
+                {family.children.map(personLabel).join(", ")}
+              </p>
+            )}
+            {family.siblings.length > 0 && (
+              <p>
+                <span className="font-medium text-stone-900 dark:text-stone-100">Siblings:</span>{" "}
+                {family.siblings.map(personLabel).join(", ")}
+              </p>
+            )}
+          </div>
+        )}
 
         {person.gender === "female" && parentalFamilyName && (
-          <div className="mt-3 space-y-2 rounded-md border border-stone-200 bg-white p-3">
-            <p className="text-sm font-medium text-stone-900">Parental family tree</p>
-            <p className="text-xs text-stone-500">
-              Matching trees named &quot;{parentalFamilyName}&quot; (her parental family).
+          <div className="mt-3 space-y-2 rounded-md border border-stone-200 bg-white p-3 dark:border-stone-700 dark:bg-stone-900">
+            <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Parental family tree</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400">
+              Matching trees named &quot;{titleCaseWords(parentalFamilyName)}&quot; (her parental family).
             </p>
             {relatedTrees.length > 0 ? (
               <ul className="space-y-1">
                 {relatedTrees.map((t: any) => (
                   <li key={t.id}>
-                    <Link className="text-sm font-medium text-stone-900 underline" href={`/tree/${t.id}`}>
+                    <Link className="text-sm font-medium text-stone-900 dark:text-stone-100 underline" href={`/tree/${t.id}`}>
                       Open {t.display_name || `${t.name} family tree`}
                     </Link>
                   </li>
@@ -496,14 +521,14 @@ export function PersonDetails({
                 {creatingParentalTree ? "Creating..." : `Create ${parentalFamilyName} family tree`}
               </Button>
             ) : (
-              <p className="text-xs text-stone-500">Ask an administrator to create this parental family tree.</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400">Ask an administrator to create this parental family tree.</p>
             )}
           </div>
         )}
 
         {needsParents && (
-          <form onSubmit={onLinkParents} className="mt-3 space-y-2 rounded-md border border-stone-200 bg-white p-3">
-            <p className="text-sm font-medium text-stone-900">Link parents</p>
+          <form onSubmit={onLinkParents} className="mt-3 space-y-2 rounded-md border border-stone-200 bg-white p-3 dark:border-stone-700 dark:bg-stone-900">
+            <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Link parents</p>
             {!family.father && (
               <div className="space-y-1">
                 <label className="text-xs font-medium" htmlFor="link-father">Father</label>
@@ -554,10 +579,10 @@ export function PersonDetails({
           </form>
         )}
 
-        <div className="mt-3 space-y-2 rounded-md border border-stone-200 bg-white p-3">
-          <p className="text-sm font-medium text-stone-900">Edit relationships</p>
+        <div className="mt-3 space-y-2 rounded-md border border-stone-200 bg-white p-3 dark:border-stone-700 dark:bg-stone-900">
+          <p className="text-sm font-medium text-stone-900 dark:text-stone-100">Edit relationships</p>
           {family.personRels.length === 0 ? (
-            <p className="text-xs text-stone-500">No relationships yet.</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400">No relationships yet.</p>
           ) : (
             <ul className="space-y-3">
               {family.personRels.map((rel: any) => {
@@ -566,7 +591,7 @@ export function PersonDetails({
                 if (editingRelId === rel.id) {
                   return (
                     <li key={rel.id}>
-                      <form onSubmit={onSaveRel} className="space-y-2 rounded border border-stone-200 p-2">
+                      <form onSubmit={onSaveRel} className="space-y-2 rounded border border-stone-200 p-2 dark:border-stone-700">
                         <select
                           className={selectClassName}
                           value={relDraft.type}
@@ -617,8 +642,8 @@ export function PersonDetails({
                 return (
                   <li key={rel.id} className="flex items-start justify-between gap-2 text-xs">
                     <div>
-                      <p className="font-medium text-stone-900">{relationshipLabel(rel.type)}</p>
-                      <p className="text-stone-500">with {other ? personLabel(other) : "Unknown"}</p>
+                      <p className="font-medium text-stone-900 dark:text-stone-100">{relationshipLabel(rel.type)}</p>
+                      <p className="text-stone-500 dark:text-stone-400">with {other ? personLabel(other) : "Unknown"}</p>
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <Button type="button" size="sm" variant="outline" onClick={() => startEditRel(rel)}>
@@ -635,15 +660,17 @@ export function PersonDetails({
           )}
         </div>
 
-        <Button
-          type="button"
-          variant="destructive"
-          className="mt-2 w-full"
-          disabled={deleting}
-          onClick={onDelete}
-        >
-          {deleting ? "Deleting..." : "Delete person"}
-        </Button>
+        {isFullAdmin && (
+          <Button
+            type="button"
+            variant="destructive"
+            className="mt-2 w-full"
+            disabled={deleting}
+            onClick={onDelete}
+          >
+            {deleting ? "Deleting..." : "Delete person"}
+          </Button>
+        )}
       </section>
 
       <section>
@@ -658,17 +685,17 @@ export function PersonDetails({
           <Button type="submit">Add</Button>
         </form>
         {lifeLoading ? (
-          <p className="text-sm text-stone-500">Loading events...</p>
+          <p className="text-sm text-stone-500 dark:text-stone-400">Loading events...</p>
         ) : (
           <div className="space-y-3">
             {lifeEvents && lifeEvents.length > 0 ? (
               lifeEvents.map((eventItem: any) => (
-                <Card key={eventItem.id} className="bg-white">
+                <Card key={eventItem.id} className="bg-white dark:bg-stone-900">
                   <CardContent className="flex items-start gap-4 p-4">
                     <Calendar className="mt-1 h-5 w-5 text-stone-400" aria-hidden="true" />
                     <div>
-                      <div className="font-medium text-stone-900">{eventItem.title}</div>
-                      <div className="text-sm text-stone-500">
+                      <div className="font-medium text-stone-900 dark:text-stone-100">{eventItem.title}</div>
+                      <div className="text-sm text-stone-500 dark:text-stone-400">
                         {eventItem.event_date ? new Date(eventItem.event_date).toLocaleDateString() : "No date"}
                         {eventItem.place && ` • ${eventItem.place}`}
                       </div>
@@ -680,7 +707,7 @@ export function PersonDetails({
                 </Card>
               ))
             ) : (
-              <p className="text-sm italic text-stone-500">No life events recorded.</p>
+              <p className="text-sm italic text-stone-500 dark:text-stone-400">No life events recorded.</p>
             )}
           </div>
         )}
@@ -690,12 +717,12 @@ export function PersonDetails({
         <h2 className="mb-4 text-xl font-semibold">Media</h2>
         <Input type="file" accept="image/*,application/pdf" onChange={onFile} aria-label="Upload photo or document" />
         {mediaLoading ? (
-          <p className="mt-3 text-sm text-stone-500">Loading media...</p>
+          <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">Loading media...</p>
         ) : (
           <div className="mt-4 grid grid-cols-2 gap-4">
             {personMedia.length > 0 ? (
               personMedia.map((item: any) => (
-                <div key={item.id} className="relative aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
+                <div key={item.id} className="relative aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-100 dark:border-stone-700 dark:bg-stone-800">
                   {item.type === "photo" ? (
                     <img
                       src={mediaFileUrl(item.id, accessToken)}

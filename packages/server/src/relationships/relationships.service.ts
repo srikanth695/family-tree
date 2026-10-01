@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import prisma from '@family-tree/database';
 import { AccessService } from '../common/access.service';
+import { familyNameKey, personAppearsOnTree } from '../common/family-name';
 import { pick, RELATIONSHIP_FIELDS } from '../common/pick';
 import { sanitizeRelationshipInput } from '../common/sanitize';
 import { ensureSiblingLinks } from '../common/siblings';
+import { loadPeopleVisibleOnTree } from '../common/tree-members';
 
 export const RELATIONSHIP_TYPES = [
   'father-child',
@@ -40,7 +42,12 @@ export class RelationshipsService {
       prisma.people.findUnique({ where: { id: String(fields.person_b_id) } }),
     ]);
 
-    if (!personA || personA.tree_id !== treeId || !personB || personB.tree_id !== treeId) {
+    if (
+      !personA ||
+      !(await this.personInTree(personA, treeId)) ||
+      !personB ||
+      !(await this.personInTree(personB, treeId))
+    ) {
       throw new NotFoundException('Both people must belong to the specified tree');
     }
 
@@ -75,7 +82,7 @@ export class RelationshipsService {
     await this.access.requireWriteAccess(treeId, creatorId);
 
     const child = await prisma.people.findUnique({ where: { id: childId } });
-    if (!child || child.tree_id !== treeId) {
+    if (!child || !(await this.personInTree(child, treeId))) {
       throw new NotFoundException('Child not found in this tree');
     }
 
@@ -107,10 +114,10 @@ export class RelationshipsService {
 
     const father = await prisma.people.findUnique({ where: { id: resolvedFatherId } });
     const mother = await prisma.people.findUnique({ where: { id: resolvedMotherId } });
-    if (!father || father.tree_id !== treeId || father.gender !== 'male') {
+    if (!father || !(await this.personInTree(father, treeId)) || father.gender !== 'male') {
       throw new BadRequestException('Father must be a male person in this tree');
     }
-    if (!mother || mother.tree_id !== treeId || mother.gender !== 'female') {
+    if (!mother || !(await this.personInTree(mother, treeId)) || mother.gender !== 'female') {
       throw new BadRequestException('Mother must be a female person in this tree');
     }
 
@@ -191,8 +198,16 @@ export class RelationshipsService {
 
   async findAll(treeId: string, userId: string) {
     await this.access.requireMembership(treeId, userId);
+    const people = await this.peopleOnTree(treeId, userId);
+    const ids = people.map((person) => person.id);
+    if (!ids.length) return [];
     return prisma.relationship.findMany({
-      where: { tree_id: treeId },
+      where: {
+        OR: [
+          { tree_id: treeId },
+          { person_a_id: { in: ids }, person_b_id: { in: ids } },
+        ],
+      },
       include: {
         person_a: true,
         person_b: true,
@@ -219,7 +234,12 @@ export class RelationshipsService {
       prisma.people.findUnique({ where: { id: nextA } }),
       prisma.people.findUnique({ where: { id: nextB } }),
     ]);
-    if (!personA || personA.tree_id !== existing.tree_id || !personB || personB.tree_id !== existing.tree_id) {
+    if (
+      !personA ||
+      !(await this.personInTree(personA, existing.tree_id)) ||
+      !personB ||
+      !(await this.personInTree(personB, existing.tree_id))
+    ) {
       throw new NotFoundException('Both people must belong to the specified tree');
     }
 
@@ -273,5 +293,28 @@ export class RelationshipsService {
     return prisma.relationship.delete({
       where: { id },
     });
+  }
+
+  private async personInTree(
+    person: { tree_id: string; last_name?: string | null; maiden_name?: string | null },
+    treeId: string,
+  ) {
+    const tree = await prisma.familyTree.findUnique({ where: { id: treeId } });
+    if (!tree) return false;
+    return personAppearsOnTree(person, treeId, familyNameKey(tree.name));
+  }
+
+  private async peopleOnTree(treeId: string, userId: string) {
+    const systemRole = await this.access.getUserRole(userId);
+    const accessibleIds =
+      systemRole === 'admin'
+        ? null
+        : (
+            await prisma.familyTree.findMany({
+              where: { OR: [{ owner_id: userId }, { members: { some: { user_id: userId } } }] },
+              select: { id: true },
+            })
+          ).map((item) => item.id);
+    return loadPeopleVisibleOnTree(treeId, accessibleIds);
   }
 }

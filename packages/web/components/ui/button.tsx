@@ -7,11 +7,11 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const buttonVariants = {
-  default: "bg-stone-900 text-stone-50 hover:bg-stone-800",
-  outline: "border border-stone-200 bg-transparent hover:bg-stone-100 text-stone-900",
-  ghost: "hover:bg-stone-100 text-stone-900",
+  default: "bg-stone-900 text-stone-50 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white",
+  outline: "border border-stone-200 bg-transparent hover:bg-stone-100 text-stone-900 dark:border-stone-700 dark:text-stone-100 dark:hover:bg-stone-800",
+  ghost: "hover:bg-stone-100 text-stone-900 dark:text-stone-100 dark:hover:bg-stone-800",
   destructive: "bg-red-500 text-white hover:bg-red-600",
-  secondary: "bg-stone-100 text-stone-900 hover:bg-stone-200",
+  secondary: "bg-stone-100 text-stone-900 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-stone-700",
 }
 
 const sizeVariants = {
@@ -26,7 +26,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         className={cn(
-          "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 disabled:pointer-events-none disabled:opacity-50",
           buttonVariants[variant as keyof typeof buttonVariants],
           sizeVariants[size as keyof typeof sizeVariants],
           className

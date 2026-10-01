@@ -78,6 +78,23 @@ export class AccessService {
     return role;
   }
 
+  async requireDeleteFamilyTree(userId: string) {
+    const role = await this.getUserRole(userId);
+    if (role !== 'admin' || !hasRight(role, 'delete_family_tree')) {
+      throw new ForbiddenException('Only a full admin can delete family trees');
+    }
+    return role;
+  }
+
+  /** Full admin only — delete person from a tree */
+  async requireDeletePerson(userId: string) {
+    const role = await this.getUserRole(userId);
+    if (role !== 'admin') {
+      throw new ForbiddenException('Only a full admin can delete a person');
+    }
+    return role;
+  }
+
   async requireManageTreeMembers(treeId: string, userId: string) {
     const result = await this.requireMembership(treeId, userId);
     if (result.systemRole === 'admin' || hasRight(result.systemRole, 'manage_tree_members')) {

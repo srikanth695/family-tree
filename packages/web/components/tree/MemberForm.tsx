@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { usePeople } from "@/hooks/use-people"
+import { titleCaseWords } from "@/lib/utils"
 
 const NEW_FAMILY_NAME = "__new__"
 
@@ -46,14 +47,14 @@ const personSchema = z
 type PersonFormValues = z.infer<typeof personSchema>
 
 const selectClassName =
-  "flex h-10 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500"
+  "flex h-10 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
 
 function personLabel(person: any) {
-  return `${person.first_name || ""} ${person.last_name || ""}`.trim()
+  return titleCaseWords(`${person.first_name || ""} ${person.last_name || ""}`)
 }
 
 function normalizeFamilyName(value: string) {
-  return value.trim().replace(/\s+/g, " ")
+  return titleCaseWords(value)
 }
 
 function familyNameKey(value: string) {
@@ -77,9 +78,9 @@ function saveStoredFamilyNames(treeId: string, names: string[]) {
   window.localStorage.setItem(`family-names:${treeId}`, JSON.stringify(names))
 }
 
-function collectFamilyNames(people: any[], stored: string[]) {
+function collectFamilyNames(people: any[], stored: string[], treeFamilyName?: string) {
   const byKey = new Map<string, string>()
-  for (const name of [...stored, ...people.map((p) => String(p.last_name || ""))]) {
+  for (const name of [...stored, treeFamilyName || "", ...people.map((p) => String(p.last_name || ""))]) {
     const cleaned = normalizeFamilyName(name)
     if (!cleaned) continue
     const key = familyNameKey(cleaned)
@@ -98,10 +99,12 @@ function resolveFamilyName(value: string, existing: string[]) {
 export function MemberForm({
   treeId,
   people = [],
+  familyName,
   onSuccess,
 }: {
   treeId: string
   people?: any[]
+  familyName?: string
   onSuccess: () => void
 }) {
   const [open, setOpen] = React.useState(false)
@@ -115,7 +118,7 @@ export function MemberForm({
     resolver: zodResolver(personSchema),
     defaultValues: {
       first_name: "",
-      last_name: "",
+      last_name: familyName || "",
       maiden_name: "",
       gender: "",
       birth_date: "",
@@ -136,15 +139,15 @@ export function MemberForm({
   const fathers = people.filter((p) => p.gender === "male")
   const mothers = people.filter((p) => p.gender === "female")
   const familyNames = React.useMemo(
-    () => collectFamilyNames(people, storedNames),
-    [people, storedNames],
+    () => collectFamilyNames(people, storedNames, familyName),
+    [people, storedNames, familyName],
   )
 
   function rememberFamilyName(name: string) {
     const resolved = resolveFamilyName(name, familyNames)
     if (!resolved) return resolved
     setStoredNames((prev) => {
-      const next = collectFamilyNames(people, [...prev, resolved])
+      const next = collectFamilyNames(people, [...prev, resolved], familyName)
       saveStoredFamilyNames(treeId, next)
       return next
     })
@@ -154,7 +157,7 @@ export function MemberForm({
   function resetForm() {
     form.reset({
       first_name: "",
-      last_name: "",
+      last_name: familyName || "",
       maiden_name: "",
       gender: "",
       birth_date: "",
@@ -171,7 +174,10 @@ export function MemberForm({
     if (!open) return
     setFamilyNameMode(familyNames.length ? "list" : "new")
     setNewFamilyName("")
-  }, [open, familyNames.length])
+    if (familyName) {
+      form.setValue("last_name", resolveFamilyName(familyName, familyNames) || familyName)
+    }
+  }, [open, familyNames, familyName, form])
 
   async function onSubmit(values: PersonFormValues) {
     if (values.gender !== "male" && values.gender !== "female") {
@@ -184,11 +190,11 @@ export function MemberForm({
     setSaving(true)
     try {
       await createPerson({
-        first_name: values.first_name.trim(),
+        first_name: titleCaseWords(values.first_name),
         last_name: lastName || undefined,
         maiden_name:
           values.gender === "female" && values.maiden_name?.trim()
-            ? values.maiden_name.trim()
+            ? titleCaseWords(values.maiden_name)
             : undefined,
         gender: values.gender,
         birth_date: values.birth_date,
@@ -264,7 +270,7 @@ export function MemberForm({
                 aria-label="New family name"
               />
             )}
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-stone-500 dark:text-stone-400">
               Choose an existing family name, or type a new one to add it to the list.
             </p>
           </div>
@@ -289,7 +295,7 @@ export function MemberForm({
                 {...form.register("maiden_name")}
                 placeholder="Birth / parental family name"
               />
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
                 For a wife, this is her parental family name — used to link a different family tree.
               </p>
             </div>
@@ -307,13 +313,13 @@ export function MemberForm({
             <Input id="death_date" type="date" {...form.register("death_date")} />
           </div>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-stone-800">
+          <label className="flex items-center gap-2 text-sm font-medium text-stone-800 dark:text-stone-200">
             <input type="checkbox" className="h-4 w-4" {...form.register("is_child")} />
             This person is a child (link father and mother)
           </label>
 
           {isChild && (
-            <div className="space-y-4 rounded-md border border-stone-200 bg-stone-50 p-3">
+            <div className="space-y-4 rounded-md border border-stone-200 bg-stone-50 p-3 dark:border-stone-700 dark:bg-stone-800">
               <div className="space-y-1">
                 <label className="text-sm font-medium" htmlFor="father_id">Father</label>
                 <select id="father_id" className={selectClassName} {...form.register("father_id")}>

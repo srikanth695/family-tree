@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { TreesService } from './trees.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AddTreeMemberDto, CreateTreeDto, UpdateTreeDto } from '../common/dto';
@@ -26,6 +26,11 @@ export class TreesController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: UpdateTreeDto, @Request() req) {
     return this.treesService.update(id, req.user.id, body.name);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string, @Request() req) {
+    return this.treesService.delete(id, req.user.id);
   }
 
   @Post(':id/members')

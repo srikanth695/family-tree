@@ -17,6 +17,7 @@ import {
   hasRight,
   roleLabel,
 } from "@family-tree/types"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function AdminPage() {
   const { data: session, status } = useSession()
@@ -55,10 +56,11 @@ export default function AdminPage() {
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Admin</h1>
-          <p className="mt-1 text-stone-600">Signed in as {session?.user?.email}</p>
-          <p className="mt-1 text-sm text-stone-500">Manage user roles and review role rights.</p>
+          <p className="mt-1 text-stone-600 dark:text-stone-300">Signed in as {session?.user?.email}</p>
+          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Manage user roles and review role rights.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ThemeToggle />
           <Link href="/dashboard">
             <Button type="button" variant="outline">Dashboard</Button>
           </Link>
@@ -72,15 +74,15 @@ export default function AdminPage() {
         <h2 className="mb-3 text-xl font-semibold">Role rights</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {SYSTEM_ROLES.map((role) => (
-            <Card key={role} className="bg-white">
+            <Card key={role} className="bg-white dark:bg-stone-900">
               <CardHeader>
                 <CardTitle className="text-lg">{ROLE_LABELS[role]}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-stone-600">
+              <CardContent className="space-y-2 text-sm text-stone-600 dark:text-stone-300">
                 <p>{ROLE_DESCRIPTIONS[role]}</p>
                 <ul className="list-disc space-y-1 pl-5">
                   {(Object.keys(ROLE_RIGHTS[role]) as Array<keyof typeof ROLE_RIGHT_LABELS>).map((right) => (
-                    <li key={right} className={ROLE_RIGHTS[role][right] ? "text-stone-800" : "text-stone-400"}>
+                    <li key={right} className={ROLE_RIGHTS[role][right] ? "text-stone-800 dark:text-stone-100" : "text-stone-400"}>
                       {ROLE_RIGHTS[role][right] ? "✓" : "–"} {ROLE_RIGHT_LABELS[right]}
                     </li>
                   ))}
@@ -93,18 +95,18 @@ export default function AdminPage() {
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Manage roles</h2>
-        {success && <p className="mb-3 text-sm text-emerald-700">{success}</p>}
+        {success && <p className="mb-3 text-sm text-emerald-700 dark:text-emerald-400">{success}</p>}
         {(error || isError) && (
           <p className="mb-3 text-sm text-red-600" role="alert">
             {error || "Could not load users."}
           </p>
         )}
         {isLoading || status === "loading" ? (
-          <p className="text-stone-500">Loading users...</p>
+          <p className="text-stone-500 dark:text-stone-400">Loading users...</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+          <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-stone-200 bg-stone-50 text-stone-600">
+              <thead className="border-b border-stone-200 bg-stone-50 text-stone-600 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
                 <tr>
                   <th className="px-4 py-3 font-medium">User</th>
                   <th className="px-4 py-3 font-medium">Current role</th>
@@ -113,15 +115,15 @@ export default function AdminPage() {
               </thead>
               <tbody>
                 {(users || []).map((user) => (
-                  <tr key={user.id} className="border-b border-stone-100 last:border-0">
+                  <tr key={user.id} className="border-b border-stone-100 last:border-0 dark:border-stone-800">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-stone-900">{user.name || "Unnamed"}</div>
-                      <div className="text-stone-500">{user.email}</div>
+                      <div className="font-medium text-stone-900 dark:text-stone-100">{user.name || "Unnamed"}</div>
+                      <div className="text-stone-500 dark:text-stone-400">{user.email}</div>
                     </td>
                     <td className="px-4 py-3">{roleLabel(user.role)}</td>
                     <td className="px-4 py-3">
                       <select
-                        className="w-full max-w-xs rounded-md border border-stone-200 bg-white px-3 py-2"
+                        className="w-full max-w-xs rounded-md border border-stone-200 bg-white px-3 py-2 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
                         value={user.role}
                         disabled={savingId === user.id || !hasRight(session?.user?.role, "manage_roles")}
                         onChange={(e) => onRoleChange(user.id, e.target.value as SystemRole)}

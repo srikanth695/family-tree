@@ -62,7 +62,7 @@ const DialogContent = ({ className, children, ...props }: React.HTMLAttributes<H
       <div
         role="dialog"
         aria-modal="true"
-        className={cn("relative w-full max-w-lg rounded-lg border border-stone-200 bg-white p-6 shadow-lg", className)}
+        className={cn("relative w-full max-w-lg rounded-lg border border-stone-200 bg-white p-6 text-stone-900 shadow-lg dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100", className)}
         {...props}
       >
         {children}

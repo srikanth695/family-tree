@@ -3,6 +3,7 @@ import { getJwtSecret, getInternalAuthSecret } from './jwt-secret'
 import { toPublicUser } from './public-user'
 import { pick, canWrite } from './pick'
 import { toDateOrUndefined, sanitizePersonInput } from './sanitize'
+import { familyNameKey, normalizeFamilyName, personAppearsOnTree, peopleVisibleOnFamilyTree } from './family-name'
 
 describe('jwt secret helpers', () => {
   it('uses JWT_SECRET when set', () => {
@@ -75,5 +76,51 @@ describe('sanitizePersonInput', () => {
 
   it('rejects invalid dates', () => {
     expect(() => toDateOrUndefined('not-a-date')).toThrow('Invalid date')
+  })
+})
+
+describe('family name matching', () => {
+  it('treats "Muthyala family tree" as Muthyala', () => {
+    expect(normalizeFamilyName('Muthyala family tree')).toBe('Muthyala')
+    expect(familyNameKey('Muthyala family tree')).toBe(familyNameKey('Muthyala'))
+  })
+
+  it('shows a wife on her married family tree and parental tree', () => {
+    const person = {
+      tree_id: 'muthyala-tree',
+      last_name: 'Balla',
+      maiden_name: 'Muthyala',
+    }
+    expect(personAppearsOnTree(person, 'muthyala-tree', familyNameKey('Muthyala'))).toBe(true)
+    expect(personAppearsOnTree(person, 'balla-tree', familyNameKey('Balla'))).toBe(true)
+    expect(personAppearsOnTree(person, 'other-tree', familyNameKey('Rivera'))).toBe(false)
+  })
+
+  it('includes a married-out daughter\'s husband on her parental tree', () => {
+    const wife = {
+      id: 'ramya',
+      tree_id: 'muthyala-tree',
+      last_name: 'Muthyala',
+      maiden_name: 'Balla',
+    }
+    const husband = {
+      id: 'husband',
+      tree_id: 'muthyala-tree',
+      last_name: 'Muthyala',
+      maiden_name: null,
+    }
+    const outsider = {
+      id: 'other',
+      tree_id: 'muthyala-tree',
+      last_name: 'Muthyala',
+      maiden_name: null,
+    }
+    const visible = peopleVisibleOnFamilyTree(
+      'balla-tree',
+      familyNameKey('Balla'),
+      [wife, husband, outsider],
+      [{ type: 'spouse', person_a_id: 'husband', person_b_id: 'ramya' }],
+    )
+    expect(visible.map((p) => p.id).sort()).toEqual(['husband', 'ramya'])
   })
 })

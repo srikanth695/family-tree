@@ -6,7 +6,14 @@ const PARENT_TYPES = new Set([
   "guardian",
 ])
 
-export type LayoutPerson = { id: string; gender?: string | null }
+export type LayoutPerson = {
+  id: string
+  gender?: string | null
+  first_name?: string | null
+  last_name?: string | null
+  birth_date?: string | Date | null
+}
+
 export type LayoutRelationship = {
   id: string
   person_a_id: string
@@ -25,12 +32,53 @@ export type SiblingGroup = {
 }
 
 const NODE_WIDTH = 210
-const H_GAP = 48
-const V_GAP = 160
-const SPOUSE_GAP = 56
+const H_GAP = 64
+const V_GAP = 180
+const SPOUSE_GAP = 64
+const GENERATION_HEIGHT = 80 + V_GAP
 
 function unique(ids: string[]) {
   return Array.from(new Set(ids))
+}
+
+function birthTime(value?: string | Date | null) {
+  if (!value) return Number.POSITIVE_INFINITY
+  const t = new Date(value).getTime()
+  return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t
+}
+
+function personSortKey(person?: LayoutPerson | null) {
+  if (!person) return ""
+  return `${birthTime(person.birth_date)}|${String(person.first_name || "").toLocaleLowerCase()}|${String(person.last_name || "").toLocaleLowerCase()}|${person.id}`
+}
+
+export function sortPersonIds(
+  ids: string[],
+  peopleById: Map<string, LayoutPerson>,
+): string[] {
+  return [...ids].sort((a, b) => {
+    const personA = peopleById.get(a)
+    const personB = peopleById.get(b)
+    const birthDelta = birthTime(personA?.birth_date) - birthTime(personB?.birth_date)
+    if (birthDelta !== 0) return birthDelta
+    return personSortKey(personA).localeCompare(personSortKey(personB))
+  })
+}
+
+/** Stable fingerprint of tree membership + relationships for layout invalidation. */
+export function layoutStructureKey(
+  people: LayoutPerson[],
+  relationships: LayoutRelationship[],
+): string {
+  const personPart = [...people]
+    .map((p) => p.id)
+    .sort()
+    .join(",")
+  const relPart = [...relationships]
+    .map((r) => `${r.id}:${r.type}:${r.person_a_id}:${r.person_b_id}`)
+    .sort()
+    .join("|")
+  return `${personPart}::${relPart}`
 }
 
 export function getSiblingGroups(relationships: LayoutRelationship[]): SiblingGroup[] {
@@ -59,10 +107,10 @@ export function getSiblingGroups(relationships: LayoutRelationship[]): SiblingGr
       ...(fatherId ? [fatherId] : []),
       ...(motherId ? [motherId] : []),
       ...(parentsOf.get(childId) || []),
-    ])
+    ]).sort()
     if (!parentIds.length) continue
 
-    const key = `${fatherId || "none"}::${motherId || "none"}::${parentIds.slice().sort().join(",")}`
+    const key = `${fatherId || "none"}::${motherId || "none"}::${parentIds.join(",")}`
     const existing = groups.get(key)
     if (existing) {
       if (!existing.children.includes(childId)) existing.children.push(childId)
@@ -113,7 +161,7 @@ export function layoutFamilyTree(
   const getCoupleChildren = (a: string, b?: string | null) => {
     const kids = [...(childrenOf.get(a) || [])]
     if (b) kids.push(...(childrenOf.get(b) || []))
-    return unique(kids).filter((id) => peopleById.has(id))
+    return sortPersonIds(unique(kids).filter((id) => peopleById.has(id)), peopleById)
   }
 
   const subtreeWidth = (personId: string, seen: Set<string>): number => {
@@ -143,6 +191,7 @@ export function layoutFamilyTree(
     if (spouseId) {
       const self = peopleById.get(personId)
       const spouse = peopleById.get(spouseId)
+      // Always place husband (male) on the left when genders are known
       if (self?.gender === "female" && spouse?.gender === "male") {
         const swap = personId
         personId = spouseId
@@ -155,7 +204,7 @@ export function layoutFamilyTree(
     const kids = getCoupleChildren(personId, spouseId)
     const coupleWidth = spouseId ? NODE_WIDTH * 2 + SPOUSE_GAP : NODE_WIDTH
     const coupleLeft = left + Math.max(0, (width - coupleWidth) / 2)
-    const y = depth * (80 + V_GAP)
+    const y = depth * GENERATION_HEIGHT
 
     positions[personId] = { x: coupleLeft, y }
     placed.add(personId)
@@ -166,7 +215,10 @@ export function layoutFamilyTree(
     }
 
     if (kids.length) {
-      let cursor = left
+      const kidsWidth = kids.reduce((sum, kid, index) => {
+        return sum + subtreeWidth(kid, new Set()) + (index > 0 ? H_GAP : 0)
+      }, 0)
+      let cursor = left + Math.max(0, (width - kidsWidth) / 2)
       for (const kid of kids) {
         const kidWidth = subtreeWidth(kid, new Set())
         placeUnit(kid, cursor, depth + 1, seen)
@@ -177,14 +229,22 @@ export function layoutFamilyTree(
     return width
   }
 
-  const roots = people
-    .map((p) => p.id)
-    .filter((id) => !childIds.has(id))
-    .filter((id) => {
-      const spouseId = spouseOf.get(id)
-      if (!spouseId) return true
-      return id < spouseId
-    })
+  const roots = sortPersonIds(
+    people
+      .map((p) => p.id)
+      .filter((id) => !childIds.has(id))
+      .filter((id) => {
+        const spouseId = spouseOf.get(id)
+        if (!spouseId) return true
+        // Prefer male as root representative for a couple
+        const self = peopleById.get(id)
+        const spouse = peopleById.get(spouseId)
+        if (self?.gender === "male" && spouse?.gender === "female") return true
+        if (self?.gender === "female" && spouse?.gender === "male") return false
+        return id < spouseId
+      }),
+    peopleById,
+  )
 
   let cursor = 0
   for (const rootId of roots) {
@@ -194,9 +254,12 @@ export function layoutFamilyTree(
     cursor += width + H_GAP * 2
   }
 
-  for (const person of people) {
-    if (placed.has(person.id)) continue
-    positions[person.id] = { x: cursor, y: 0 }
+  const orphans = sortPersonIds(
+    people.map((p) => p.id).filter((id) => !placed.has(id)),
+    peopleById,
+  )
+  for (const id of orphans) {
+    positions[id] = { x: cursor, y: 0 }
     cursor += NODE_WIDTH + H_GAP
   }
 
@@ -224,11 +287,20 @@ export function junctionPosition(
     .filter(Boolean)
     .map((p) => p.y)
 
-  const xs = [...parentXs, ...childXs]
-  const x = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length - 4 : 0
+  // Center junction under the couple midpoint when both parents exist
+  let x: number
+  if (parentXs.length >= 2) {
+    x = (Math.min(...parentXs) + Math.max(...parentXs)) / 2 - 4
+  } else if (parentXs.length === 1 && childXs.length) {
+    x = (parentXs[0] + childXs.reduce((a, b) => a + b, 0) / childXs.length) / 2 - 4
+  } else {
+    const xs = [...parentXs, ...childXs]
+    x = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length - 4 : 0
+  }
+
   const parentY = parentYs.length ? Math.max(...parentYs) : 0
   const childY = childYs.length ? Math.min(...childYs) : parentY + V_GAP
-  const y = parentY + Math.max(40, (childY - parentY) / 2)
+  const y = parentY + Math.max(48, (childY - parentY) / 2)
 
   return { x, y }
 }
@@ -267,10 +339,13 @@ export function spouseRelationshipLabel(
   return "Husband / Wife"
 }
 
+const POSITIONS_KEY = (treeId: string) => `family-tree-positions:${treeId}`
+const STRUCTURE_KEY = (treeId: string) => `family-tree-structure:${treeId}`
+
 export function loadSavedPositions(treeId: string): Record<string, TreePosition> {
   if (typeof window === "undefined") return {}
   try {
-    const raw = window.localStorage.getItem(`family-tree-positions:${treeId}`)
+    const raw = window.localStorage.getItem(POSITIONS_KEY(treeId))
     if (!raw) return {}
     const parsed = JSON.parse(raw)
     return parsed && typeof parsed === "object" ? parsed : {}
@@ -281,5 +356,21 @@ export function loadSavedPositions(treeId: string): Record<string, TreePosition>
 
 export function savePositions(treeId: string, positions: Record<string, TreePosition>) {
   if (typeof window === "undefined") return
-  window.localStorage.setItem(`family-tree-positions:${treeId}`, JSON.stringify(positions))
+  window.localStorage.setItem(POSITIONS_KEY(treeId), JSON.stringify(positions))
+}
+
+export function loadSavedStructureKey(treeId: string): string | null {
+  if (typeof window === "undefined") return null
+  return window.localStorage.getItem(STRUCTURE_KEY(treeId))
+}
+
+export function saveStructureKey(treeId: string, key: string) {
+  if (typeof window === "undefined") return
+  window.localStorage.setItem(STRUCTURE_KEY(treeId), key)
+}
+
+export function clearSavedLayout(treeId: string) {
+  if (typeof window === "undefined") return
+  window.localStorage.removeItem(POSITIONS_KEY(treeId))
+  window.localStorage.removeItem(STRUCTURE_KEY(treeId))
 }

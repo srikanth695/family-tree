@@ -60,14 +60,14 @@ export function LoginForm({ isAdmin = false }: { isAdmin?: boolean }) {
         "w-full max-w-sm space-y-6 rounded-xl border p-8 shadow-lg",
         isAdmin
           ? "border-stone-800 bg-stone-900/50 text-white backdrop-blur-md"
-          : "border-stone-200 bg-white/80 text-stone-900 backdrop-blur-sm",
+          : "border-stone-200 bg-white/80 text-stone-900 backdrop-blur-sm dark:border-stone-700 dark:bg-stone-900/80 dark:text-stone-100",
       )}
     >
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
           {isAdmin ? "Admin Login" : "Welcome back"}
         </h1>
-        <p className={cn("text-sm", isAdmin ? "text-stone-400" : "text-stone-500")}>
+        <p className={cn("text-sm", isAdmin ? "text-stone-400" : "text-stone-500 dark:text-stone-400")}>
           {isAdmin
             ? "Restricted access for authorized administrators"
             : "Enter your credentials to access your family tree"}
@@ -83,7 +83,7 @@ export function LoginForm({ isAdmin = false }: { isAdmin?: boolean }) {
               id="email"
               {...form.register("email")}
               placeholder="email@example.com"
-              className={cn("pl-10", isAdmin ? "border-stone-700 bg-stone-800 text-white placeholder:text-stone-500" : "border-stone-200 bg-stone-50")}
+              className={cn("pl-10", isAdmin ? "border-stone-700 bg-stone-800 text-white placeholder:text-stone-500" : "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800")}
             />
           </div>
           {form.formState.errors.email && (
@@ -100,7 +100,7 @@ export function LoginForm({ isAdmin = false }: { isAdmin?: boolean }) {
               {...form.register("password")}
               type="password"
               placeholder="••••••••"
-              className={cn("pl-10", isAdmin ? "border-stone-700 bg-stone-800 text-white placeholder:text-stone-500" : "border-stone-200 bg-stone-50")}
+              className={cn("pl-10", isAdmin ? "border-stone-700 bg-stone-800 text-white placeholder:text-stone-500" : "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800")}
             />
           </div>
           {form.formState.errors.password && (
@@ -131,9 +131,9 @@ export function LoginForm({ isAdmin = false }: { isAdmin?: boolean }) {
       )}
 
       {!isAdmin && (
-        <p className="text-center text-sm text-stone-500">
+        <p className="text-center text-sm text-stone-500 dark:text-stone-400">
           No account?{" "}
-          <Link href="/register" className="font-medium text-stone-900 underline">
+          <Link href="/register" className="font-medium text-stone-900 underline dark:text-stone-100">
             Create one
           </Link>
         </p>

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -58,11 +59,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-stone-50 px-4">
-      <div className="w-full max-w-sm space-y-6 rounded-xl border border-stone-200 bg-white p-8 shadow-lg">
+    <main className="relative flex min-h-screen items-center justify-center bg-stone-50 px-4 dark:bg-stone-950">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
+      <div className="w-full max-w-sm space-y-6 rounded-xl border border-stone-200 bg-white p-8 shadow-lg dark:border-stone-700 dark:bg-stone-900">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-semibold">Create an account</h1>
-          <p className="text-sm text-stone-500">Start documenting your family history</p>
+          <p className="text-sm text-stone-500 dark:text-stone-400">Start documenting your family history</p>
         </div>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1">
@@ -85,9 +89,9 @@ export default function RegisterPage() {
             {isLoading ? "Creating..." : "Create account"}
           </Button>
         </form>
-        <p className="text-center text-sm text-stone-500">
+        <p className="text-center text-sm text-stone-500 dark:text-stone-400">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-stone-900 underline">Sign in</Link>
+          <Link href="/login" className="font-medium text-stone-900 underline dark:text-stone-100">Sign in</Link>
         </p>
       </div>
     </main>
