@@ -256,6 +256,28 @@ Docker runs migrations on start (`RUN_DB_MIGRATE=true`), so rebuild the images i
 
 ---
 
+## CI: publish images to Docker Hub
+
+`.github/workflows/docker-publish.yml` runs on pushes to `main`, `v*` tags, pull requests and manual dispatch:
+
+1. **test** — installs, builds `types` + `database`, typechecks the web app and runs `npm test`.
+2. **publish** — builds `family-tree-api` and `family-tree-web` and pushes them to Docker Hub. Pull requests only build; they never push.
+
+Tags pushed: `latest` (from `main`), the short commit SHA, and `1.2.3` / `1.2` for tags like `v1.2.3`.
+
+One-time setup in the GitHub repo (Settings → Secrets and variables → Actions):
+
+| Name | Type | Value |
+|------|------|-------|
+| `DOCKERHUB_USERNAME` | secret | Docker Hub username |
+| `DOCKERHUB_TOKEN` | secret | Docker Hub access token with *Read & Write* (Account settings → Personal access tokens) |
+| `DOCKERHUB_NAMESPACE` | variable, optional | Org or user to push under, if not your username |
+| `NEXT_PUBLIC_API_URL` | variable, optional | Public API URL baked into the web image (default `http://localhost:3001`) |
+
+Run the published images with `docker compose`, replacing the `build:` sections with `image: <namespace>/family-tree-api:latest` and `family-tree-web:latest`. `NEXT_PUBLIC_API_URL` is fixed at build time, so build separate web images per environment.
+
+---
+
 ## Roles (brief)
 
 System roles: `admin`, `family_tree_admin`, `family_admin`, `user`.  
