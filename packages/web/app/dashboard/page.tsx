@@ -3,19 +3,14 @@
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { FormEvent, MouseEvent, useState } from "react"
+import { FormEvent, MouseEvent, useEffect, useState } from "react"
 import { useTrees } from "@/hooks/use-trees"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardTitle } from "@/components/ui/card"
-import { hasRight, roleLabel } from "@family-tree/types"
+import { familyTreeTitle, hasRight, roleLabel } from "@family-tree/types"
+import { useFeedback } from "@/components/feedback-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
-
-function familyTreeLabel(tree: { name?: string; display_name?: string; family_name?: string }) {
-  if (tree.display_name) return tree.display_name
-  const base = (tree.family_name || tree.name || "").trim().replace(/\s+family\s+tree$/i, "")
-  return base ? `${base} family tree` : "Family tree"
-}
 
 export default function DashboardPage() {
   const { data: session, status } = useSession()
@@ -26,6 +21,7 @@ export default function DashboardPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const { confirm } = useFeedback()
 
   const canCreateTrees = hasRight(session?.user?.role, "create_family_tree")
   const canDeleteTrees = session?.user?.role === "admin" && hasRight(session?.user?.role, "delete_family_tree")
@@ -33,10 +29,11 @@ export default function DashboardPage() {
   const canCreate =
     status === "authenticated" && canCreateTrees && Boolean(hasToken || session?.user?.accessToken)
 
-  if (status === "unauthenticated") {
-    router.push("/login")
-    return null
-  }
+  useEffect(() => {
+    if (status === "unauthenticated") router.replace("/login")
+  }, [status, router])
+
+  if (status === "unauthenticated") return null
 
   async function createEmptyFamilyTree(event?: FormEvent) {
     event?.preventDefault()
@@ -65,7 +62,7 @@ export default function DashboardPage() {
       const tree = await createTree(familyName)
       setName("")
       await refetchTrees()
-      const label = familyTreeLabel(tree)
+      const label = familyTreeTitle(tree)
       setSuccess(
         tree.created === false
           ? `${label} already exists. Opening it so you can add people.`
@@ -84,11 +81,14 @@ export default function DashboardPage() {
     event.stopPropagation()
     if (!canDeleteTrees) return
 
-    const label = familyTreeLabel(tree)
+    const label = familyTreeTitle(tree)
     const peopleCount = tree._count?.people ?? 0
-    const confirmed = window.confirm(
-      `Delete ${label}? This permanently removes the tree${peopleCount ? ` and its ${peopleCount} ${peopleCount === 1 ? "person" : "people"}` : ""}, relationships, and media. This cannot be undone.`,
-    )
+    const confirmed = await confirm({
+      title: `Delete ${label}?`,
+      description: `This permanently removes the tree${peopleCount ? ` and its ${peopleCount} ${peopleCount === 1 ? "person" : "people"}` : ""}, relationships, and media. This cannot be undone.`,
+      confirmLabel: "Delete family tree",
+      destructive: true,
+    })
     if (!confirmed) return
 
     setDeletingId(tree.id)
@@ -173,7 +173,7 @@ export default function DashboardPage() {
             <Card key={tree.id} className="flex h-full min-h-[11rem] flex-col overflow-hidden border-stone-300 bg-white shadow-md transition hover:border-stone-500 hover:shadow-lg dark:border-stone-600 dark:bg-stone-800 dark:hover:border-stone-400">
               <Link href={`/tree/${tree.id}`} className="flex min-h-0 flex-1 flex-col p-5">
                 <CardTitle className="text-lg leading-snug break-words">
-                  {familyTreeLabel(tree)}
+                  {familyTreeTitle(tree)}
                 </CardTitle>
                 <div className="mt-auto pt-6">
                   <p className="text-4xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">

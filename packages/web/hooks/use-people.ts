@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import type { Person } from "@family-tree/types"
 import api from "@/lib/api"
 
 export function usePeople(treeId: string) {
@@ -47,7 +48,7 @@ export function usePeople(treeId: string) {
   })
 
   return {
-    people: query.data as any[] | undefined,
+    people: query.data as Person[] | undefined,
     isLoading: query.isLoading,
     isError: query.isError,
     createPerson: createMutation.mutateAsync,

@@ -18,6 +18,20 @@ Monorepo for a collaborative family-tree product:
 
 ---
 
+## Features
+
+- **Interactive tree** — drag people to arrange the canvas; the layout is saved for everyone on the tree (owners and editors) and resets when people or relationships change.
+- **Photos and avatars** — upload photos and documents per person, pick one with **Use as profile photo** (otherwise the newest photo is used) and delete files you no longer want. People without a photo get an illustrated avatar that matches their life stage (baby, child, teen, adult, senior) and gender, with their age range such as `30–39` underneath. Deceased people use their age at death.
+- **Family marks** — the tree's surname (from the tree name, e.g. "Muthyala family tree" → Muthyala) drives two badges:
+  - **Married in** (amber): a woman whose maiden name is *not* the family name and whose current surname is, or whose husband belongs to the family.
+  - **Married out** (grey): a daughter of the family (maiden name = family name) who now carries another surname.
+  - Men belong to the family when their surname matches and get no badge. Fill in `maiden_name` for women so the rules can tell the two surnames apart.
+- **In-laws** — select a person and the parents of their spouse are highlighted in violet with an **In-law** badge.
+- **How related?** — pick two people to get a plain-language relationship ("Ravi is Asha's second cousin once removed", "father-in-law", ...) and the path between them.
+- **Upcoming** — birthdays, wedding anniversaries (needs a start date on the spouse link) and remembrance days in the next 60 days.
+
+---
+
 ## Quick start matrix
 
 | Goal | Postgres | How to run |
@@ -166,8 +180,8 @@ NEXT_PUBLIC_API_URL="http://127.0.0.1:3001"
 
 ```powershell
 npm install
-npm run db:generate
 npm run db:migrate
+npm run build -w @family-tree/types -w @family-tree/database   # generates the client and compiles dist
 npm run db:seed
 ```
 
@@ -194,8 +208,8 @@ Same as **C**, but set `DATABASE_URL` to the remote instance and skip `docker co
 ```powershell
 $env:DATABASE_URL = "postgresql://USER:PASSWORD@HOST:5432/family_tree?schema=public"
 npm install
-npm run db:generate
 npm run db:migrate
+npm run build -w @family-tree/types -w @family-tree/database
 # optional demo data:
 npm run db:seed
 npm run dev
@@ -218,6 +232,28 @@ Run from repo root (uses `packages/database` + `DATABASE_URL`):
 
 Migrations live in `packages/database/prisma/migrations`.
 
+### After pulling changes or editing `schema.prisma`
+
+The API loads the Prisma client from the **compiled** `packages/database/dist`, so `db:generate` alone is not enough:
+
+```powershell
+npm run db:migrate                          # apply new migrations to your database
+npm run build -w @family-tree/database      # regenerate the client AND recompile dist
+npm run build -w @family-tree/types         # only if packages/types changed
+# then restart `npm run dev`
+```
+
+Docker runs migrations on start (`RUN_DB_MIGRATE=true`), so rebuild the images instead: `npm run docker:up`.
+
+### Troubleshooting
+
+| Symptom | Cause / fix |
+|---------|-------------|
+| `The column family_trees.layout does not exist` (Prisma `P2022`) | A migration has not been applied to this database. Run `npm run db:migrate`. |
+| `Unknown argument profile_media_id` (or any new column) | The server is running a stale compiled client. Run `npm run build -w @family-tree/database` and restart. |
+| `property <field> should not exist` (HTTP 400) | The API validates with a whitelist. Add the field to the DTO in `packages/server/src/common/dto.ts`. |
+| React Flow warning about `nodeTypes` / `edgeTypes` in dev | Fast Refresh reloading the module; harmless, gone after a full reload. |
+
 ---
 
 ## Roles (brief)
@@ -234,7 +270,7 @@ Rights are defined in `packages/types`. Admin UI: `/admin` (admin role).
 1. **Secrets** — Compose / `.env.docker` use fixed local secrets; rotate for anything beyond a laptop.
 2. **Demo seed** — disable `RUN_DB_SEED` on shared databases.
 3. **Postgres port** — Compose publishes `5432` to the host for convenience; lock down or stop publishing for shared machines.
-4. **Media** — files are served via authenticated `GET /media/:id/file` (not public static).
+4. **Media** — files are served via authenticated `GET /media/:id/file` (not public static). The web app currently passes the login token as `?access_token=` so `<img>` tags can load photos; that puts the token in URLs and logs, so move to header-based fetching or short-lived signed links before any shared deployment.
 5. **Node** — Prisma/Nest tooling targets LTS Node 22; local Node 23 may need `npm install --ignore-scripts` then `npm run db:generate`.
 
 ---
@@ -259,6 +295,8 @@ scripts/docker-up.ps1
 ```powershell
 npm test
 ```
+
+Web unit tests (Vitest) cover the layout, person display and family-mark rules, the relationship finder and upcoming dates: `npm run test -w @family-tree/web`.
 
 ## License / status
 

@@ -16,11 +16,11 @@ model User {
   role          String   @default("user")
   created_at    DateTime @default(now())
 
-  owned_trees    FamilyTree[]
-  tree_members   TreeMember[]
-  created_people People[]
+  owned_trees     FamilyTree[]
+  tree_members    TreeMember[]
+  created_people  People[]
   created_stories Story[]
-  uploaded_media Media[]
+  uploaded_media  Media[]
 
   @@map("users")
 }
@@ -30,6 +30,7 @@ model FamilyTree {
   name       String
   owner_id   String
   owner      User     @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  layout     Json?
   created_at DateTime @default(now())
 
   members       TreeMember[]
@@ -39,6 +40,7 @@ model FamilyTree {
   stories       Story[]
   relationships Relationship[]
 
+  @@index([owner_id])
   @@map("family_trees")
 }
 
@@ -52,6 +54,7 @@ model TreeMember {
   invited_at DateTime?
 
   @@unique([tree_id, user_id])
+  @@index([user_id])
   @@map("tree_members")
 }
 
@@ -78,6 +81,8 @@ model People {
   languages            String[]
   cause_of_death       String?
   burial_place         String?
+  profile_media_id     String?
+  profile_media        Media?     @relation("PersonProfilePhoto", fields: [profile_media_id], references: [id], onDelete: SetNull)
   created_by           String?
   created_at           DateTime   @default(now())
   updated_at           DateTime   @updatedAt
@@ -89,6 +94,7 @@ model People {
   stories            Story[]
   created_by_user    User?          @relation(fields: [created_by], references: [id], onDelete: SetNull)
 
+  @@index([tree_id])
   @@map("people")
 }
 
@@ -107,6 +113,9 @@ model Relationship {
   person_a People @relation("RelationshipPersonA", fields: [person_a_id], references: [id], onDelete: Cascade)
   person_b People @relation("RelationshipPersonB", fields: [person_b_id], references: [id], onDelete: Cascade)
 
+  @@index([tree_id])
+  @@index([person_a_id])
+  @@index([person_b_id])
   @@map("relationships")
 }
 
@@ -121,24 +130,28 @@ model LifeEvent {
   place       String?
   created_at  DateTime  @default(now())
 
+  @@index([person_id])
   @@map("life_events")
 }
 
 model Media {
-  id            String      @id @default(uuid())
+  id            String     @id @default(uuid())
   tree_id       String
-  tree          FamilyTree  @relation(fields: [tree_id], references: [id], onDelete: Cascade)
+  tree          FamilyTree @relation(fields: [tree_id], references: [id], onDelete: Cascade)
   person_id     String?
-  person        People?     @relation(fields: [person_id], references: [id], onDelete: Cascade)
+  person        People?    @relation(fields: [person_id], references: [id], onDelete: Cascade)
   uploaded_by   String
-  uploader      User        @relation(fields: [uploaded_by], references: [id], onDelete: Cascade)
+  uploader      User       @relation(fields: [uploaded_by], references: [id], onDelete: Cascade)
+  profile_of    People[]   @relation("PersonProfilePhoto")
   type          String
   file_url      String
   thumbnail_url String?
   caption       String?
   taken_date    DateTime?
-  created_at    DateTime    @default(now())
+  created_at    DateTime   @default(now())
 
+  @@index([tree_id])
+  @@index([person_id])
   @@map("media")
 }
 
@@ -153,6 +166,7 @@ model Source {
   confidence String?
   created_at DateTime   @default(now())
 
+  @@index([tree_id])
   @@map("sources")
 }
 
@@ -168,5 +182,7 @@ model Story {
   author     User       @relation(fields: [author_id], references: [id], onDelete: Cascade)
   created_at DateTime   @default(now())
 
+  @@index([tree_id])
+  @@index([person_id])
   @@map("stories")
 }

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import type { Relationship } from "@family-tree/types"
 import api from "@/lib/api"
 
 export function useRelationships(treeId: string) {
@@ -53,7 +54,7 @@ export function useRelationships(treeId: string) {
   })
 
   return {
-    relationships: query.data as any[] | undefined,
+    relationships: query.data as Relationship[] | undefined,
     isLoading: query.isLoading,
     isError: query.isError,
     createRelationship: createMutation.mutateAsync,

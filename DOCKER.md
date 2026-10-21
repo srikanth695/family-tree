@@ -53,6 +53,7 @@ Do not reuse demo secrets outside local development.
 
 - Volume: `api_uploads` → `/app/uploads`  
 - Auth: `GET /media/:id/file` with JWT (`Authorization: Bearer …` or `?access_token=`)
+- Files are removed from the volume when the media is deleted in the app; profile-photo links are cleared by the database (`ON DELETE SET NULL`).
 
 ## Troubleshooting
 
@@ -63,6 +64,7 @@ Do not reuse demo secrets outside local development.
 | `Cannot find module '@nestjs/core'` | Rebuild API image (`docker compose build --no-cache api`) |
 | `P3005` / non-empty DB without migrations | Entrypoint baselines `20260908120000_init`; or run `prisma migrate resolve` |
 | Web OK, API down | `docker compose logs api` |
+| Column / table missing after an update | Migrations run on API start; make sure `RUN_DB_MIGRATE=true` and rebuild: `npm run docker:up` |
 
 ## Image builds (manual)
 

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { usePeople } from "@/hooks/use-people"
 import { titleCaseWords } from "@/lib/utils"
+import { useFeedback } from "@/components/feedback-provider"
 
 const NEW_FAMILY_NAME = "__new__"
 
@@ -112,6 +113,7 @@ export function MemberForm({
   const [storedNames, setStoredNames] = React.useState<string[]>([])
   const [familyNameMode, setFamilyNameMode] = React.useState<"list" | "new">("list")
   const [newFamilyName, setNewFamilyName] = React.useState("")
+  const { notify } = useFeedback()
   const { createPerson } = usePeople(treeId)
 
   const form = useForm<PersonFormValues>({
@@ -181,7 +183,7 @@ export function MemberForm({
 
   async function onSubmit(values: PersonFormValues) {
     if (values.gender !== "male" && values.gender !== "female") {
-      alert("Select male or female")
+      notify("Select male or female")
       return
     }
     const typedName = familyNameMode === "new" ? newFamilyName : values.last_name
@@ -209,7 +211,7 @@ export function MemberForm({
       onSuccess()
     } catch (error) {
       console.error(error)
-      alert(error instanceof Error ? error.message : "Failed to create person")
+      notify(error instanceof Error ? error.message : "Failed to create person")
     } finally {
       setSaving(false)
     }

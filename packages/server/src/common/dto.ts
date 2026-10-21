@@ -8,8 +8,9 @@ import {
   IsArray,
   IsDateString,
   MaxLength,
+  IsObject,
 } from 'class-validator';
-import { SYSTEM_ROLES } from '@family-tree/types';
+import { RELATIONSHIP_TYPES, SYSTEM_ROLES } from '@family-tree/types';
 import { ALL_ROLES } from './pick';
 
 export class RegisterDto {
@@ -62,6 +63,15 @@ export class UpdateTreeDto {
   @MinLength(1)
   @MaxLength(200)
   name!: string;
+}
+
+export class UpdateTreeLayoutDto {
+  @IsString()
+  @MaxLength(100000)
+  structureKey!: string;
+
+  @IsObject()
+  positions!: Record<string, { x: number; y: number }>;
 }
 
 export class AddTreeMemberDto {
@@ -258,6 +268,11 @@ export class UpdatePersonDto {
   @IsOptional()
   @IsString()
   burial_place?: string;
+
+  /** Photo uploaded for this person to show on the tree; null clears the choice. */
+  @IsOptional()
+  @IsString()
+  profile_media_id?: string | null;
 }
 
 export class CreateRelationshipDto {
@@ -267,7 +282,7 @@ export class CreateRelationshipDto {
   @IsString()
   person_b_id!: string;
 
-  @IsString()
+  @IsIn([...RELATIONSHIP_TYPES])
   type!: string;
 
   @IsOptional()
@@ -293,7 +308,7 @@ export class UpdateRelationshipDto {
   person_b_id?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn([...RELATIONSHIP_TYPES])
   type?: string;
 
   @IsOptional()

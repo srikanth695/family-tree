@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import prisma from '@family-tree/database';
+import prisma, { Prisma } from '@family-tree/database';
 import { AccessService } from '../common/access.service';
 import { familyNameKey, normalizeFamilyName, personAppearsOnTree } from '../common/family-name';
 import { ALL_ROLES } from '../common/pick';
@@ -188,6 +188,31 @@ export class TreesService {
         _count: { select: { people: true } },
       },
     });
+  }
+
+  async saveLayout(
+    treeId: string,
+    userId: string,
+    layout: { structureKey: string; positions: Record<string, { x: number; y: number }> },
+  ) {
+    await this.access.requireWriteAccess(treeId, userId);
+    const positions: Record<string, { x: number; y: number }> = {};
+    for (const [personId, point] of Object.entries(layout.positions)) {
+      if (Number.isFinite(point?.x) && Number.isFinite(point?.y)) {
+        positions[personId] = { x: point.x, y: point.y };
+      }
+    }
+    await prisma.familyTree.update({
+      where: { id: treeId },
+      data: { layout: { structureKey: layout.structureKey, positions } },
+    });
+    return { structureKey: layout.structureKey, positions };
+  }
+
+  async resetLayout(treeId: string, userId: string) {
+    await this.access.requireWriteAccess(treeId, userId);
+    await prisma.familyTree.update({ where: { id: treeId }, data: { layout: Prisma.DbNull } });
+    return { reset: true };
   }
 
   async delete(treeId: string, userId: string) {

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
+import type { TreeLayout } from "@family-tree/types"
 import api from "@/lib/api"
 
 export type FamilyTreeRecord = {
@@ -8,6 +9,8 @@ export type FamilyTreeRecord = {
   family_name?: string
   display_name?: string
   created?: boolean
+  my_role?: string
+  layout?: TreeLayout | null
   _count?: { people?: number }
 }
 

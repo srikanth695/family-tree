@@ -145,3 +145,75 @@ export function relationshipLabel(type: string): string {
       return type
   }
 }
+
+export const RELATIONSHIP_TYPES: RelationshipType[] = [
+  'father-child',
+  'mother-child',
+  'parent-child',
+  'spouse',
+  'sibling',
+  'adopted',
+  'guardian',
+]
+
+/** Person as returned by the API (dates are ISO strings). */
+export interface Person {
+  id: string
+  tree_id: string
+  first_name: string
+  last_name?: string | null
+  maiden_name?: string | null
+  nicknames?: string[]
+  gender?: Gender | null
+  birth_date?: string | null
+  birth_date_precision?: string | null
+  birth_place?: string | null
+  death_date?: string | null
+  death_date_precision?: string | null
+  death_place?: string | null
+  is_living?: boolean
+  bio?: string | null
+  occupation?: string | null
+  religion?: string | null
+  nationality?: string | null
+  languages?: string[]
+  cause_of_death?: string | null
+  burial_place?: string | null
+  profile_media_id?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+/** Edge between two people; for parent-type edges person_a is the parent. */
+export interface Relationship {
+  id: string
+  tree_id: string
+  person_a_id: string
+  person_b_id: string
+  type: RelationshipType
+  start_date?: string | null
+  end_date?: string | null
+  status?: RelationshipStatus | null
+}
+
+export interface TreePoint {
+  x: number
+  y: number
+}
+
+/** Saved canvas arrangement, shared by everyone on the tree. */
+export interface TreeLayout {
+  structureKey: string
+  positions: Record<string, TreePoint>
+}
+
+/** "Sharma family tree" from a stored name such as "Sharma" or "Sharma family tree". */
+export function familyTreeTitle(tree?: {
+  name?: string | null
+  display_name?: string | null
+  family_name?: string | null
+} | null): string {
+  if (tree?.display_name) return tree.display_name
+  const base = (tree?.family_name || tree?.name || '').trim().replace(/\s+family\s+tree$/i, '')
+  return base ? `${base} family tree` : 'Family tree'
+}

@@ -150,10 +150,24 @@ export class PeopleService {
 
   async update(id: string, data: Record<string, unknown>, userId: string) {
     await this.access.requirePersonAccess(id, userId, true);
-    return prisma.people.update({
-      where: { id },
-      data: pick(sanitizePersonInput(data), PERSON_FIELDS) as any,
-    });
+    const fields = pick(sanitizePersonInput(data), PERSON_FIELDS) as Record<string, unknown>;
+
+    if (data.profile_media_id !== undefined) {
+      const mediaId = data.profile_media_id;
+      if (mediaId === null) {
+        fields.profile_media_id = null;
+      } else if (typeof mediaId === 'string') {
+        const media = await prisma.media.findUnique({ where: { id: mediaId } });
+        if (!media || media.person_id !== id || media.type !== 'photo') {
+          throw new BadRequestException('Profile photo must be a photo uploaded for this person');
+        }
+        fields.profile_media_id = mediaId;
+      } else {
+        throw new BadRequestException('Invalid profile photo');
+      }
+    }
+
+    return prisma.people.update({ where: { id }, data: fields as any });
   }
 
   async delete(id: string, userId: string) {

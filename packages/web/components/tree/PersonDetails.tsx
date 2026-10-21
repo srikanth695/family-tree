@@ -9,12 +9,13 @@ import { useRelationships } from "@/hooks/use-relationships"
 import { useTrees } from "@/hooks/use-trees"
 import { useSession } from "next-auth/react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Calendar, Image as ImageIcon } from "lucide-react"
+import { Calendar, Image as ImageIcon, Trash2 } from "lucide-react"
 import { mediaFileUrl } from "@/lib/api"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { hasRight, relationshipLabel } from "@family-tree/types"
 import { titleCaseWords } from "@/lib/utils"
+import { useFeedback } from "@/components/feedback-provider"
 
 const selectClassName = "w-full rounded-md border border-stone-200 bg-white px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
 
@@ -54,8 +55,9 @@ export function PersonDetails({
   onDeleted?: () => void
   onUpdated?: () => void
 }) {
+  const { confirm, notify } = useFeedback()
   const { lifeEvents, isLoading: lifeLoading, createLifeEvent } = useLifeEvents(person.id)
-  const { media, isLoading: mediaLoading, uploadMedia } = useMedia(treeId)
+  const { media, isLoading: mediaLoading, uploadMedia, deleteMedia } = useMedia(treeId)
   const { deletePerson, updatePerson, people } = usePeople(treeId)
   const { relationships, linkParents, updateRelationship, deleteRelationship } = useRelationships(treeId)
   const { trees, createTree } = useTrees()
@@ -189,17 +191,37 @@ export function PersonDetails({
     event.target.value = ""
   }
 
+  async function onDeleteMedia(item: { id: string; type: string; caption?: string | null }) {
+    const confirmed = await confirm({
+      title: item.type === "photo" ? "Delete this photo?" : "Delete this document?",
+      description: `${item.caption || "This file"} will be permanently removed.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    })
+    if (!confirmed) return
+    try {
+      await deleteMedia(item.id)
+      onUpdated?.()
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Could not delete the file")
+    }
+  }
+
   async function onDelete() {
     const label = `${person.first_name || ""} ${person.last_name || ""}`.trim() || "this person"
-    if (!window.confirm(`Delete ${label}? This also removes their relationships, events, and linked media.`)) {
-      return
-    }
+    const confirmed = await confirm({
+      title: `Delete ${label}?`,
+      description: "This also removes their relationships, events, and linked media.",
+      confirmLabel: "Delete person",
+      destructive: true,
+    })
+    if (!confirmed) return
     setDeleting(true)
     try {
       await deletePerson(person.id)
       onDeleted?.()
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to delete person")
+      notify(error instanceof Error ? error.message : "Failed to delete person")
     } finally {
       setDeleting(false)
     }
@@ -208,15 +230,15 @@ export function PersonDetails({
   async function onSavePerson(event: React.FormEvent) {
     event.preventDefault()
     if (!personForm.first_name.trim()) {
-      alert("First name is required")
+      notify("First name is required")
       return
     }
     if (!personForm.birth_date) {
-      alert("Birth date is required")
+      notify("Birth date is required")
       return
     }
     if (personForm.gender !== "male" && personForm.gender !== "female") {
-      alert("Select male or female")
+      notify("Select male or female")
       return
     }
     setSavingPerson(true)
@@ -239,7 +261,7 @@ export function PersonDetails({
       setEditingPerson(false)
       onUpdated?.()
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to update person")
+      notify(error instanceof Error ? error.message : "Failed to update person")
     } finally {
       setSavingPerson(false)
     }
@@ -250,7 +272,7 @@ export function PersonDetails({
     const nextFatherId = family.father?.id || fatherId
     const nextMotherId = family.mother?.id || motherId
     if (!nextFatherId || !nextMotherId) {
-      alert("Select both father and mother")
+      notify("Select both father and mother")
       return
     }
     setLinking(true)
@@ -264,7 +286,7 @@ export function PersonDetails({
       setMotherId("")
       onUpdated?.()
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to link parents")
+      notify(error instanceof Error ? error.message : "Failed to link parents")
     } finally {
       setLinking(false)
     }
@@ -283,7 +305,7 @@ export function PersonDetails({
     event.preventDefault()
     if (!editingRelId) return
     if (!relDraft.person_a_id || !relDraft.person_b_id || !relDraft.type) {
-      alert("Type and both people are required")
+      notify("Type and both people are required")
       return
     }
     setSavingRel(true)
@@ -299,20 +321,25 @@ export function PersonDetails({
       setEditingRelId(null)
       onUpdated?.()
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to update relationship")
+      notify(error instanceof Error ? error.message : "Failed to update relationship")
     } finally {
       setSavingRel(false)
     }
   }
 
   async function onDeleteRel(relId: string) {
-    if (!window.confirm("Remove this relationship?")) return
+    const confirmed = await confirm({
+      title: "Remove this relationship?",
+      confirmLabel: "Remove",
+      destructive: true,
+    })
+    if (!confirmed) return
     try {
       await deleteRelationship(relId)
       if (editingRelId === relId) setEditingRelId(null)
       onUpdated?.()
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to delete relationship")
+      notify(error instanceof Error ? error.message : "Failed to delete relationship")
     }
   }
 
@@ -323,7 +350,7 @@ export function PersonDetails({
       const tree = await createTree(parentalFamilyName)
       window.location.href = `/tree/${tree.id}`
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to create parental family tree")
+      notify(error instanceof Error ? error.message : "Failed to create parental family tree")
       setCreatingParentalTree(false)
     }
   }
@@ -714,7 +741,10 @@ export function PersonDetails({
       </section>
 
       <section>
-        <h2 className="mb-4 text-xl font-semibold">Media</h2>
+        <h2 className="mb-1 text-xl font-semibold">Media</h2>
+        <p className="mb-4 text-sm text-stone-600 dark:text-stone-300">
+          The newest photo becomes {person.first_name}&apos;s picture on the tree, unless you pick one with &ldquo;Use as profile photo&rdquo;. Without a photo, an avatar matching their age is shown.
+        </p>
         <Input type="file" accept="image/*,application/pdf" onChange={onFile} aria-label="Upload photo or document" />
         {mediaLoading ? (
           <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">Loading media...</p>
@@ -734,10 +764,35 @@ export function PersonDetails({
                       {item.caption || "Document"}
                     </a>
                   )}
+                  <button
+                    type="button"
+                    aria-label={`Delete ${item.caption || "file"}`}
+                    className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-stone-900/80 text-white hover:bg-red-700"
+                    onClick={() => onDeleteMedia(item)}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  {item.type === "photo" &&
+                    (person.profile_media_id === item.id ? (
+                      <span className="absolute left-1 top-1 rounded-full bg-teal-700 px-2 py-0.5 text-[11px] font-semibold text-white">
+                        Profile photo
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="absolute inset-x-1 bottom-1 min-h-8 rounded-md bg-stone-900/80 px-2 text-xs font-medium text-white hover:bg-stone-900"
+                        onClick={async () => {
+                          await updatePerson({ id: person.id, data: { profile_media_id: item.id } })
+                          onUpdated?.()
+                        }}
+                      >
+                        Use as profile photo
+                      </button>
+                    ))}
                 </div>
               ))
             ) : (
-              <div className="col-span-full flex flex-col items-center justify-center py-8 text-stone-400">
+              <div className="col-span-full flex flex-col items-center justify-center py-8 text-stone-500 dark:text-stone-400">
                 <ImageIcon className="mb-2 h-8 w-8 opacity-20" aria-hidden="true" />
                 <p className="text-sm">No photos or documents uploaded.</p>
               </div>

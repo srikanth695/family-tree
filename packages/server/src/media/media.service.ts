@@ -108,7 +108,10 @@ export class MediaService {
     const media = await this.access.requireMediaAccess(id, userId, true);
     const fileName = path.basename(media.file_url);
     const filePath = path.join(this.uploadDir, fileName);
+    // people.profile_media_id is set to null by the database (ON DELETE SET NULL).
+    const deleted = await prisma.media.delete({ where: { id } });
+    // Remove the file only once the row is gone, so a failed delete never orphans a record.
     await fsPromises.unlink(filePath).catch(() => undefined);
-    return prisma.media.delete({ where: { id } });
+    return deleted;
   }
 }

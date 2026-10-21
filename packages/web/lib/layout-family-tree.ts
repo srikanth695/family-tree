@@ -1,10 +1,6 @@
-const PARENT_TYPES = new Set([
-  "father-child",
-  "mother-child",
-  "parent-child",
-  "adopted",
-  "guardian",
-])
+import { PARENT_CHILD_TYPES } from "@family-tree/types"
+
+export const PARENT_TYPES: ReadonlySet<string> = new Set(PARENT_CHILD_TYPES)
 
 export type LayoutPerson = {
   id: string
@@ -337,40 +333,4 @@ export function spouseRelationshipLabel(
   if (hasMale && !hasFemale) return "Husband"
   if (hasFemale && !hasMale) return "Wife"
   return "Husband / Wife"
-}
-
-const POSITIONS_KEY = (treeId: string) => `family-tree-positions:${treeId}`
-const STRUCTURE_KEY = (treeId: string) => `family-tree-structure:${treeId}`
-
-export function loadSavedPositions(treeId: string): Record<string, TreePosition> {
-  if (typeof window === "undefined") return {}
-  try {
-    const raw = window.localStorage.getItem(POSITIONS_KEY(treeId))
-    if (!raw) return {}
-    const parsed = JSON.parse(raw)
-    return parsed && typeof parsed === "object" ? parsed : {}
-  } catch {
-    return {}
-  }
-}
-
-export function savePositions(treeId: string, positions: Record<string, TreePosition>) {
-  if (typeof window === "undefined") return
-  window.localStorage.setItem(POSITIONS_KEY(treeId), JSON.stringify(positions))
-}
-
-export function loadSavedStructureKey(treeId: string): string | null {
-  if (typeof window === "undefined") return null
-  return window.localStorage.getItem(STRUCTURE_KEY(treeId))
-}
-
-export function saveStructureKey(treeId: string, key: string) {
-  if (typeof window === "undefined") return
-  window.localStorage.setItem(STRUCTURE_KEY(treeId), key)
-}
-
-export function clearSavedLayout(treeId: string) {
-  if (typeof window === "undefined") return
-  window.localStorage.removeItem(POSITIONS_KEY(treeId))
-  window.localStorage.removeItem(STRUCTURE_KEY(treeId))
 }

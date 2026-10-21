@@ -50,6 +50,18 @@ const DialogTrigger = ({
 
 const DialogContent = ({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const ctx = React.useContext(DialogContext)
+  const open = Boolean(ctx?.open)
+  const onOpenChange = ctx?.onOpenChange
+
+  React.useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onOpenChange?.(false)
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [open, onOpenChange])
+
   if (!ctx?.open) return null
 
   return (

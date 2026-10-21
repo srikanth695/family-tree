@@ -19,7 +19,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-screen bg-stone-200 text-stone-900 antialiased dark:bg-black dark:text-stone-100">
+      <body className="min-h-screen bg-stone-100 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

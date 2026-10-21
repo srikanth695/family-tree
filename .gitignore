@@ -12,3 +12,5 @@ coverage
 .DS_Store
 prisma/*.db
 packages/database/generated
+
+packages/server/dist2

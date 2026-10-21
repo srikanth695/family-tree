@@ -11,6 +11,7 @@ import { usePeople } from "@/hooks/use-people"
 import { relationshipLabel } from "@family-tree/types"
 import { Input } from "@/components/ui/input"
 import { titleCaseWords } from "@/lib/utils"
+import { useFeedback } from "@/components/feedback-provider"
 
 const NEW_PERSON = "__new__"
 
@@ -285,6 +286,7 @@ export function RelationshipForm({
 }) {
   const [open, setOpen] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
+  const { notify } = useFeedback()
   const { createRelationship, linkParents } = useRelationships(treeId)
   const { createPerson, updatePerson } = usePeople(treeId)
 
@@ -448,7 +450,7 @@ export function RelationshipForm({
       onSuccess()
     } catch (error) {
       console.error(error)
-      alert(error instanceof Error ? error.message : "Failed to create relationship")
+      notify(error instanceof Error ? error.message : "Failed to create relationship")
     } finally {
       setSaving(false)
     }
